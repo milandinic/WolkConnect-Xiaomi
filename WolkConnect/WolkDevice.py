@@ -28,8 +28,10 @@ logger = logging.getLogger(__name__)
 
 class WolkDevice:
     """ WolkDevice class
-    """
-    def __init__(self, serial="", password="", host="api-demo.wolkabout.com", port=8883, certificate_file_path="WolkConnect/ca.crt", set_insecure=False, serializer=WolkMQTTSerializer.WolkSerializerType.JSON_MULTI, responseHandler=None, sensors=None, actuators=None, alarms=None, qos=0):
+    """ # api-demo.wolkabout.com
+    def __init__(self, serial="", password="", host="api-demo.wolkabout.com", port=8883, certificate_file_path="WolkConnect/ca.crt", 
+    set_insecure=False, serializer=WolkMQTTSerializer.WolkSerializerType.JSON_MULTI, responseHandler=None,
+     sensors=None, actuators=None, alarms=None, qos=0):
         """
             serial - Device serial used to connect to MQTT broker
             password - Device serial used to connect to MQTT broker
@@ -116,6 +118,19 @@ class WolkDevice:
         logger.info("Disconnecting %s from mqtt broker...", self.serial)
         self.mqttClient.disconnect()
 
+    def publishSensorIfOld(self, newValue, sensor):
+        """ Publish one sensor
+        """
+        if not isinstance(sensor, Sensor):        
+            message = "Provided object is not a Sensor"
+            logger.warning(message)
+            return (False, message)
+        if newValue != sensor.readingValue[0] or sensor.timestamp + 600 < time.time():
+            sensor.setTimestamp(time.time())
+            sensor.setReadingValue(newValue)
+            return self._publishReadings([sensor])
+
+        return (False, "Update not needed yet")
 
     def publishSensor(self, sensor):
         """ Publish one sensor
@@ -125,6 +140,7 @@ class WolkDevice:
             logger.warning(message)
             return (False, message)
 
+        sensor.setTimestamp(time.time())
         return self._publishReadings([sensor])
 
     def publishRawReading(self, rawReading):

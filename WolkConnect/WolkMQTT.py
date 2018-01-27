@@ -18,6 +18,7 @@
 import logging
 import paho.mqtt.client as mqtt
 from WolkConnect.Sensor import ReadingsCollection
+from time import sleep
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +156,10 @@ class WolkMQTTClient:
         if result:
             errorMessage = "Disconnected " + self.clientConfig.username + " with error code " + str(result)
             logger.error(errorMessage)
-            raise WolkMQTTClientException(errorMessage)
+            sleep(10)
+            logger.info("Connecting again")
+            self.connect()
+#            raise WolkMQTTClientException(errorMessage)
         else:
             logger.info("Disconnected %s from mqtt broker", self.clientConfig.username)
 

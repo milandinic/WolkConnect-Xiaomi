@@ -38,7 +38,7 @@ class Sensor():
         self.dataType = dataType
         self.readingValue = value
         if not self.readingValue:
-            self.readingValue = []
+            self.readingValue = [-1]
         self.minValue = minValue
         self.maxValue = maxValue
         self.dataSize = dataSize
