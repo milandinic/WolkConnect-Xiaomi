@@ -19,11 +19,12 @@ class XiaomiConnector:
     sid = '0'
     counter = 0
 
-    def __init__(self, data_callback=None, auto_discover=True):
+    def __init__(self, gatewayPassword, data_callback=None):
         """Initialize the connector."""
         self.data_callback = data_callback
         self.last_tokens = dict()
         self.socket = self._prepare_socket()
+        self.gatewayPassword = gatewayPassword
 
         self.nodes = dict()
 
@@ -99,7 +100,7 @@ class XiaomiConnector:
         self.send_command({"cmd": "read", "sid": device_sid})
 
     def update_rgb_color(self, r, g, b, a):
-        cipher = AES.new("password", AES.MODE_CBC, self.IV)
+        cipher = AES.new(self.gatewayPassword, AES.MODE_CBC, self.IV)
         token = self.last_tokens[self.sid]
         enc = cipher.encrypt(token)
         key = binascii.hexlify(enc).decode('ascii')
