@@ -198,3 +198,19 @@ class WolkMQTTClient:
             return(True, "")
         else:
             return(False, mqtt.error_string(info.rc))
+
+    def ping(self):
+        """ publish WolkMQTTPublishMessage
+        """
+        logger.info("Ping")
+
+        if not self.client:
+            raise WolkMQTTClientException("No mqtt client")
+
+        info = self.client.publish("ping/" + self.clientConfig.username, "", self.clientConfig.qos)
+        if info.rc == mqtt.MQTT_ERR_SUCCESS:
+            return(True, "")
+        elif info.is_published:
+            return(True, "")
+        else:
+            return(False, mqtt.error_string(info.rc))

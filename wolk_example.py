@@ -17,7 +17,7 @@ serial = "5a3be0qbf4ysm8qu"
 password = "7f7199e8-aed0-43b9-9eae-1f819485921d"
 
 # xiaomi gateway password
-gatewayPassword = "1234567890asdfgh"
+gatewayPassword = "12334567890"
 
 #sid'
 buttonsIds = ["158d00016c39d1", "158d00019cd52e"]
@@ -25,10 +25,12 @@ doorIds = ["158d0001e03727"]
 smokeIds = ["158d0001d3785d"]
 leakIds = ["158d0001bc1a4c"]
 temperatureIds = ["158d00019cec05"]
+gatewayId = "34ce00fb5e8a"
 
 #sid' end
 
 buttonValues = {}
+
 buttons = {}
 doors = {}
 doorVoltages = {}
@@ -37,10 +39,25 @@ smokeDensities = {}
 smokeVoltages = {}
 leaks = {}
 leakVoltages = {}
-
 temperatures = {}
 humidities = {}
 temperatureVoltages = {}
+
+sensors = list(buttons.values())
+sensors.extend(list(doors.values()))
+sensors.extend(list(doorVoltages.values()))
+sensors.extend(list(smokes.values()))
+sensors.extend(list(smokeVoltages.values()))
+sensors.extend(list(smokeDensities.values()))
+sensors.extend(list(leaks.values()))
+sensors.extend(list(leaks.values()))
+sensors.extend(list(leakVoltages.values()))
+sensors.extend(list(temperatures.values()))
+sensors.extend(list(humidities.values()))
+sensors.extend(list(temperatureVoltages.values()))
+
+pingInterval = 60 #seconds
+lastPing = time.time() + pingInterval
 
 def createSensors():
     index = 1
@@ -88,20 +105,25 @@ blueColor = WolkConnect.Actuator("CB", WolkConnect.DataType.NUMERIC)
 greenColor = WolkConnect.Actuator("CG", WolkConnect.DataType.NUMERIC)
 alfaColor = WolkConnect.Actuator("CA", WolkConnect.DataType.NUMERIC)
 
+actuators = [redColor, blueColor, greenColor, alfaColor]
+
 redColor.value = 0
 blueColor.value = 0
 greenColor.value = 0
 alfaColor.value = 0
 
 
-def mqttMessageHandler(wolkDevice, message):    
+def mqttMessageHandler(wolkDevice, message):     
     actuator = wolkDevice.getActuator(message.ref)
    
     if not actuator:
-        logger.warning("%s could not find actuator with ref %s", wolkDevice.serial, message.ref)
+        if message.ref == wolkDevice.serial:
+            print ("pong received")
+            lastPing = time.time()
         return
 
     if message.wolkCommand == WolkConnect.WolkCommand.SET:
+        print(message)
         actuator.value = message.value
         if message.ref in [redColor.actuatorRef, greenColor.actuatorRef, blueColor.actuatorRef, alfaColor.actuatorRef]:
             r = int(float(redColor.value))
@@ -206,20 +228,33 @@ def handle_water_leak(model, sid, cmd, data):
 connector = XiaomiConnector(gatewayPassword = gatewayPassword, data_callback=push_data)
 
 serializer = WolkConnect.WolkSerializerType.JSON_MULTI
-device = WolkConnect.WolkDevice(serial, password, serializer=serializer, responseHandler=mqttMessageHandler, set_insecure = True)
 
-def check_illumination():
-    while True:     
-       for key in connector.nodes:
-           connector.request_current_status(key)
-          # device.ping()
-       sleep(60)
+device = WolkConnect.WolkDevice(serial, password, host = "api-integration.wolksense.com",
+     certificate_file_path="WolkConnect/integration/ca.crt", sensors=sensors, actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler, set_insecure = True)
+
+def check_illumination_and_ping():
+    while True:
+       connector.request_current_status(gatewayId)
+       device.ping()
+       sleep(pingInterval)
+       if (time.time() - lastPing) - 10 > pingInterval:
+         print("missing ping")
+         exit(1)
+
+def ask_initial_data():
+    sleep(10)
+    connector.request_sids(gatewayId)
+    sleep(10)
+    for key in connector.nodes:
+        connector.request_current_status(key)
 
 try:
-    thread = Thread(target = check_illumination)
+    thread = Thread(target = check_illumination_and_ping)
     thread.start()
-    
-    
+
+    threadInitalRead = Thread(target = ask_initial_data)
+    threadInitalRead.start()
+
     device.connect()
     while True:
         connector.check_incoming()

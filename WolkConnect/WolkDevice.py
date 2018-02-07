@@ -94,7 +94,7 @@ class WolkDevice:
     def getActuator(self, ref):
         """ Get actuator by reference
         """
-        return self._actuators[ref]
+        return self._actuators.get(ref)
 
     def getAlarms(self):
         """ Get list of alarms
@@ -118,6 +118,9 @@ class WolkDevice:
         logger.info("Disconnecting %s from mqtt broker...", self.serial)
         self.mqttClient.disconnect()
 
+    def ping(self):
+        self.mqttClient.ping()
+
     def publishSensorIfOld(self, newValue, sensor):
         """ Publish one sensor
         """
@@ -125,7 +128,7 @@ class WolkDevice:
             message = "Provided object is not a Sensor"
             logger.warning(message)
             return (False, message)
-        if newValue != sensor.readingValue[0] or sensor.timestamp + 600 < time.time():
+        if newValue != sensor.readingValue[0]:
             sensor.setTimestamp(time.time())
             sensor.setReadingValue(newValue)
             return self._publishReadings([sensor])

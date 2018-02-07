@@ -351,6 +351,13 @@ class WolkSenseMQTTSerializer(WolkMQTTSerializer):
         mqttMessage = WolkMQTTPublishMessage(topic, mqttString)
         return mqttMessage
 
+    def _serializePing(self, ping):
+        """ Serialize Ping to mqtt message
+        """
+        topic = "ping/" + self.serialNumber
+        mqttString = ""
+        mqttMessage = WolkMQTTPublishMessage(topic, mqttString)
+        return mqttMessage
 
     @staticmethod
     def _stringFromActuatorValue(actuator):
@@ -507,7 +514,10 @@ class WolkJSONMQTTSerializer(WolkMQTTSerializer):
             return None
 
         topicPath = self.rootActuatorsSubscribeTopic + self.serialNumber + "/"
-        return [topicPath + actuator.actuatorRef for actuator in device.getActuators()]
+        actautorTopics = [topicPath + actuator.actuatorRef for actuator in device.getActuators()]
+        print(actautorTopics)
+        actautorTopics.append("pingresponse/" + self.serialNumber)
+        return actautorTopics
 
     def _serializeReading(self, reading):
         """ Serialize reading to mqtt message

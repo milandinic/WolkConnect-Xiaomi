@@ -73,7 +73,6 @@ class XiaomiConnector:
                 self.nodes[payload["sid"]] = dict(model=payload["model"])
 
             if cmd == "heartbeat" and payload["sid"] not in self.nodes:
-                self.request_sids(payload["sid"])
                 self.nodes[payload["sid"]] = json.loads(payload["data"])
                 self.nodes[payload["sid"]]["model"] = payload["model"]
                 self.nodes[payload["sid"]]["sensors"] = []
@@ -88,7 +87,7 @@ class XiaomiConnector:
         if "token" in payload:
             self.last_tokens[payload["sid"]] = payload['token']
             if self.nodes[payload["sid"]]["model"] == "gateway" and self.sid == '0':
-                print("Setting sid " + payload["sid"])
+                print("Setting gateway sid " + payload["sid"])
                 self.sid = payload["sid"]
 
     def request_sids(self, sid):
