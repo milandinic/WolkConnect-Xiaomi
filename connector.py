@@ -45,11 +45,10 @@ class XiaomiConnector:
         return sock
 
     def check_incoming(self):
-        print("Check incoming data.")
         data, addr = self.socket.recvfrom(self.SOCKET_BUFSIZE)
         try:
             payload = json.loads(data.decode("utf-8"))
-            print(payload)
+            print("Incoming data:" + str(payload))
             self.handle_incoming_data(payload)          
 
         except Exception as e:

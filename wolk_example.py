@@ -17,15 +17,16 @@ serial = "5a3be0qbf4ysm8qu"
 password = "7f7199e8-aed0-43b9-9eae-1f819485921d"
 
 # xiaomi gateway password
-gatewayPassword = "12334567890"
+gatewayPassword = "1234556789090asdf"
 
 #sid'
-buttonsIds = ["158d00016c39d1", "158d00019cd52e"]
-doorIds = ["158d0001e03727"]
-smokeIds = ["158d0001d3785d"]
-leakIds = ["158d0001bc1a4c"]
-temperatureIds = ["158d00019cec05"]
-gatewayId = "34ce00fb5e8a"
+buttonsIds = []
+doorIds = []
+smokeIds = []
+leakIds = []
+temperatureIds = []
+motionIds = []
+gatewayId = "None
 
 #sid' end
 
@@ -42,6 +43,8 @@ leakVoltages = {}
 temperatures = {}
 humidities = {}
 temperatureVoltages = {}
+motions = {}
+motionVoltages = {}
 
 sensors = list(buttons.values())
 sensors.extend(list(doors.values()))
@@ -55,6 +58,8 @@ sensors.extend(list(leakVoltages.values()))
 sensors.extend(list(temperatures.values()))
 sensors.extend(list(humidities.values()))
 sensors.extend(list(temperatureVoltages.values()))
+sensors.extend(list(motions.values()))
+sensors.extend(list(motionVoltages.values()))
 
 pingInterval = 60 #seconds
 lastPing = time.time() + pingInterval
@@ -93,6 +98,13 @@ def createSensors():
       humidities[sid] = WolkConnect.Sensor("H" + str(index), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=100.0)
       index = index + 1
 
+    index = 1
+    for sid in motionIds:
+      motions[sid] = WolkConnect.Sensor("M" + str(index), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=1.0)
+      motionVoltages[sid] = WolkConnect.Sensor("MV" + str(index), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=100.0)
+      index = index + 1
+
+
 createSensors()
 
 
@@ -115,15 +127,14 @@ alfaColor.value = 0
 
 def mqttMessageHandler(wolkDevice, message):     
     actuator = wolkDevice.getActuator(message.ref)
-   
+    global lastPing
     if not actuator:
         if message.ref == wolkDevice.serial:
-            print ("pong received")
+            logger.info("pong received")
             lastPing = time.time()
         return
 
     if message.wolkCommand == WolkConnect.WolkCommand.SET:
-        print(message)
         actuator.value = message.value
         if message.ref in [redColor.actuatorRef, greenColor.actuatorRef, blueColor.actuatorRef, alfaColor.actuatorRef]:
             r = int(float(redColor.value))
@@ -145,9 +156,13 @@ def push_data(model, sid, cmd, data):
   handle_smoke_alarm(model, sid, cmd, data)
   handle_water_leak(model, sid, cmd, data)
   handle_gateway(model, sid, cmd, data)
+  handle_motion(model, sid, cmd, data)    
 
 def handle_gateway(model, sid, cmd, data):
  if model == "gateway":
+  if gatewayId != sid:
+    logger.warning("Gaweway detected with sid: " + sid)
+    return
   for key, value in data.items():
     if key == "illumination":
         (success, errorMessage) = device.publishSensorIfOld(value, illumination)
@@ -167,10 +182,13 @@ def handle_gateway(model, sid, cmd, data):
             device.publishActuator(blueColor)
             device.publishActuator(alfaColor)
 
-# click
+# button
 def handle_button(model, sid, cmd, data):
   if model == "switch":
-   button = buttons[sid]
+   button = buttons.get(sid)
+   if (button == None):
+      logger.warning("New BUTTON device detected with sid " + sid)
+      return
    buttonValue = buttonValues[sid]
    for key, value in data.items():  
      if key == "status" and value == "click":
@@ -178,10 +196,13 @@ def handle_button(model, sid, cmd, data):
       buttonValues[sid] = buttonValue + 1
       (success, errorMessage) = device.publishSensor(button)
 
-# temp sensor
+# temperature humidity sensor
 def handle_temperature(model, sid, cmd, data):
  if model == "sensor_ht":
-   temperature = temperatures[sid]
+   temperature = temperatures.get(sid)
+   if (temperature == None):
+      logger.warning("New TEMERATURE device detected with sid " + sid)
+      return
    temperatureVoltage = temperatureVoltages[sid]
    humidity = humidities[sid]
    for key, value in data.items():
@@ -194,7 +215,10 @@ def handle_temperature(model, sid, cmd, data):
 
 def handle_door_window_sensor(model, sid, cmd, data):
   if model == "magnet":
-   door = doors[sid]
+   door = doors.get(sid)
+   if (door == None):
+      logger.warning("New DOOR device detected with sid " + sid)
+      return
    doorVoltage = doorVoltages[sid]
    for key, value in data.items():
       if key == "status":
@@ -204,7 +228,11 @@ def handle_door_window_sensor(model, sid, cmd, data):
 
 def handle_smoke_alarm(model, sid, cmd, data):
  if model == "smoke":
-   smoke = smokes[sid]
+   smoke = smokes.get(sid)
+   if (smoke == None):
+     logger.warning("New SMOKE device detected with sid " + sid)
+     return
+
    smokeVoltage = smokeVoltages[sid]
    smokeDensity = smokeDensities[sid]
    for key, value in data.items():  
@@ -217,13 +245,29 @@ def handle_smoke_alarm(model, sid, cmd, data):
 
 def handle_water_leak(model, sid, cmd, data):
   if model == "sensor_wleak.aq1":
-    leak = leaks[sid]
+    leak = leaks.get(sid)
+    if (leak == None):
+      logger.warning("New LEAK device detected with sid " + sid)
+      return
     leakVoltage = leakVoltages[sid]
     for key, value in data.items():
          if key == "status":
           (success, errorMessage) = device.publishSensorIfOld(value, leak)
          elif key == "voltage":
           (success, errorMessage) = device.publishSensorIfOld(value/1000, leakVoltage)
+
+def handle_motion(model, sid, cmd, data):
+   if model == "motion":
+    motion = motions.get(sid)
+    if (motion == None):
+      logger.warning("New MOTION device detected with sid " + sid)
+      return
+    motionVoltage = motionVoltages[sid]
+    for key, value in data.items():
+         if key == "status":
+          (success, errorMessage) = device.publishSensorIfOld(value, motion)
+         elif key == "voltage":
+          (success, errorMessage) = device.publishSensorIfOld(value/1000, motionVoltage)
 
 connector = XiaomiConnector(gatewayPassword = gatewayPassword, data_callback=push_data)
 
@@ -237,15 +281,16 @@ def check_illumination_and_ping():
        connector.request_current_status(gatewayId)
        device.ping()
        sleep(pingInterval)
-       if (time.time() - lastPing) - 10 > pingInterval:
+       if lastPing + pingInterval + 5 < time.time():
          print("missing ping")
          exit(1)
 
 def ask_initial_data():
-    sleep(10)
-    connector.request_sids(gatewayId)
-    sleep(10)
-    for key in connector.nodes:
+  if gatewayId != None:
+     sleep(10)
+     connector.request_sids(gatewayId)
+     sleep(10)
+     for key in connector.nodes:
         connector.request_current_status(key)
 
 try:

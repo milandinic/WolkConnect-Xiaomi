@@ -515,7 +515,6 @@ class WolkJSONMQTTSerializer(WolkMQTTSerializer):
 
         topicPath = self.rootActuatorsSubscribeTopic + self.serialNumber + "/"
         actautorTopics = [topicPath + actuator.actuatorRef for actuator in device.getActuators()]
-        print(actautorTopics)
         actautorTopics.append("pingresponse/" + self.serialNumber)
         return actautorTopics
 
