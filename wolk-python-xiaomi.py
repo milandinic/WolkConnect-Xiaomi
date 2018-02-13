@@ -6,6 +6,7 @@ import logging
 import time
 import WolkConnect
 import datetime
+import sys
 
 from connector import XiaomiConnector
 
@@ -13,11 +14,11 @@ logger = logging.getLogger("WolkConnect")
 WolkConnect.setupLoggingLevel(logging.INFO)
 
 # Device parameters
-serial = "5a3be0qbf4ysm8qu"
-password = "7f7199e8-aed0-43b9-9eae-1f819485921d"
+serial = "uj0u3nph5ttjsm1g"
+password = "4b74c38c-a6bf-4e6f-9698-3eac3b65905e"
 
 # xiaomi gateway password
-gatewayPassword = "1234556789090asdf"
+gatewayPassword = "1234567890"
 
 #sid'
 buttonsIds = []
@@ -26,7 +27,7 @@ smokeIds = []
 leakIds = []
 temperatureIds = []
 motionIds = []
-gatewayId = "None
+gatewayId = None
 
 #sid' end
 
@@ -63,6 +64,8 @@ sensors.extend(list(motionVoltages.values()))
 
 pingInterval = 60 #seconds
 lastPing = time.time() + pingInterval
+
+work = True
 
 def createSensors():
     index = 1
@@ -150,14 +153,16 @@ def mqttMessageHandler(wolkDevice, message):
         logger.warning("Unknown command %s", message.wolkCommand)
 
 def push_data(model, sid, cmd, data):
-  handle_button(model, sid, cmd, data)
-  handle_temperature(model, sid, cmd, data)
+  handle_switch(model, sid, cmd, data)
+  handle_temperature_humidity(model, sid, cmd, data)
   handle_door_window_sensor(model, sid, cmd, data)
   handle_smoke_alarm(model, sid, cmd, data)
   handle_water_leak(model, sid, cmd, data)
   handle_gateway(model, sid, cmd, data)
   handle_motion(model, sid, cmd, data)    
 
+# gateway
+# https://xiaomi-mi.com/sockets-and-sensors/xiaomi-mi-gateway-2/
 def handle_gateway(model, sid, cmd, data):
  if model == "gateway":
   if gatewayId != sid:
@@ -182,8 +187,9 @@ def handle_gateway(model, sid, cmd, data):
             device.publishActuator(blueColor)
             device.publishActuator(alfaColor)
 
-# button
-def handle_button(model, sid, cmd, data):
+# switch 
+# https://xiaomi-mi.com/mi-smart-home/xiaomi-mi-wireless-switch/
+def handle_switch(model, sid, cmd, data):
   if model == "switch":
    button = buttons.get(sid)
    if (button == None):
@@ -197,7 +203,8 @@ def handle_button(model, sid, cmd, data):
       (success, errorMessage) = device.publishSensor(button)
 
 # temperature humidity sensor
-def handle_temperature(model, sid, cmd, data):
+# https://xiaomi-mi.com/sockets-and-sensors/xiaomi-mi-temperature-humidity-sensor/
+def handle_temperature_humidity(model, sid, cmd, data):
  if model == "sensor_ht":
    temperature = temperatures.get(sid)
    if (temperature == None):
@@ -213,6 +220,8 @@ def handle_temperature(model, sid, cmd, data):
      elif key == "voltage":
        (success, errorMessage) = device.publishSensorIfOld(value/1000, temperatureVoltage)
 
+# door window sensor
+# https://xiaomi-mi.com/sockets-and-sensors/xiaomi-mi-door-window-sensors/
 def handle_door_window_sensor(model, sid, cmd, data):
   if model == "magnet":
    door = doors.get(sid)
@@ -226,6 +235,8 @@ def handle_door_window_sensor(model, sid, cmd, data):
       elif key == "voltage":
         (success, errorMessage) = device.publishSensorIfOld(value/1000, doorVoltage)
 
+# smoke alarm
+# https://xiaomi-mi.com/sockets-and-sensors/xiaomi-mijia-honeywell-smoke-detector-white/
 def handle_smoke_alarm(model, sid, cmd, data):
  if model == "smoke":
    smoke = smokes.get(sid)
@@ -243,6 +254,8 @@ def handle_smoke_alarm(model, sid, cmd, data):
        elif key == "density":
          (success, errorMessage) = device.publishSensorIfOld(value, smokeDensity)
 
+# aqara water leak detector
+# https://xiaomi-mi.com/news-and-actions/aqara-water-leak-sensor-device-that-can-make-the-whole-family-happy/
 def handle_water_leak(model, sid, cmd, data):
   if model == "sensor_wleak.aq1":
     leak = leaks.get(sid)
@@ -256,6 +269,8 @@ def handle_water_leak(model, sid, cmd, data):
          elif key == "voltage":
           (success, errorMessage) = device.publishSensorIfOld(value/1000, leakVoltage)
 
+# Xiaomi Mi Smart Home Occupancy Senso
+# https://xiaomi-mi.com/sockets-and-sensors/xiaomi-mi-occupancy-sensor/
 def handle_motion(model, sid, cmd, data):
    if model == "motion":
     motion = motions.get(sid)
@@ -273,17 +288,19 @@ connector = XiaomiConnector(gatewayPassword = gatewayPassword, data_callback=pus
 
 serializer = WolkConnect.WolkSerializerType.JSON_MULTI
 
-device = WolkConnect.WolkDevice(serial, password, host = "api-integration.wolksense.com",
-     certificate_file_path="WolkConnect/integration/ca.crt", sensors=sensors, actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler, set_insecure = True)
+device = WolkConnect.WolkDevice(serial, password, sensors=sensors, actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler)
 
-def check_illumination_and_ping():
-    while True:
-       connector.request_current_status(gatewayId)
+def perform_ping():
+    global work
+    global device
+    while work:
        device.ping()
        sleep(pingInterval)
        if lastPing + pingInterval + 5 < time.time():
          print("missing ping")
-         exit(1)
+         device.disconnect()
+         device = WolkConnect.WolkDevice(serial, password, sensors=sensors, actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler)
+         device.connect()
 
 def ask_initial_data():
   if gatewayId != None:
@@ -294,16 +311,17 @@ def ask_initial_data():
         connector.request_current_status(key)
 
 try:
-    thread = Thread(target = check_illumination_and_ping)
+    thread = Thread(target = perform_ping)
     thread.start()
 
     threadInitalRead = Thread(target = ask_initial_data)
     threadInitalRead.start()
 
     device.connect()
-    while True:
+    while work:
         connector.check_incoming()
     device.disconnect()
+    
     exit(0)
 
 except WolkConnect.WolkMQTT.WolkMQTTClientException as e:
