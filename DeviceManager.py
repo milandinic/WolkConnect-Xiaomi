@@ -28,6 +28,7 @@ class DeviceManager:
   temperatureVoltages = {}
   motions = {}
   motionVoltages = {}
+  motionTriggered = {}
 
   switchIndex = 1
   doorIndex = 1

@@ -5,6 +5,7 @@ import time
 import WolkConnect
 import datetime
 import sys
+import threading
 
 from Connector import XiaomiConnector
 from Config import AutoConfig
@@ -12,6 +13,8 @@ from DeviceManager import DeviceManager
 
 logger = logging.getLogger("WolkConnect")
 WolkConnect.setupLoggingLevel(logging.INFO)
+
+lock = threading.Lock()
 
 # Device parameters
 serial = "uj0u3nph5ttjsm1g"
@@ -200,14 +203,18 @@ def handle_motion(model, sid, cmd, data):
     motionVoltage = deviceManager.motionVoltages[sid]
     for key, value in data.items():
          if key == "status":
-          (success, errorMessage) = device.publishSensorIfOld(value, motion)
+          (success, errorMessage) = device.publishSensorIfOld(1, motion)
+          lock.acquire()
+          deviceManager.motionTriggered[sid] = time.time()
+          lock.release()
          elif key == "voltage":
           (success, errorMessage) = device.publishSensorIfOld(value/1000, motionVoltage)
 
 connector = XiaomiConnector(gatewayPassword = gatewayPassword, data_callback=push_data, config=config)
 serializer = WolkConnect.WolkSerializerType.JSON_MULTI
 
-device = WolkConnect.WolkDevice(serial, password, sensors=deviceManager.getSensors(), actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler)
+device = WolkConnect.WolkDevice(serial, password, host = "api-integration.wolksense.com",
+     certificate_file_path="WolkConnect/integration/ca.crt", sensors=deviceManager.getSensors(), actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler, set_insecure = True)
 
 def perform_ping():
     global work
@@ -224,11 +231,34 @@ def perform_ping():
          device = WolkConnect.WolkDevice(serial, password, host = "api-integration.wolksense.com", certificate_file_path="WolkConnect/integration/ca.crt", sensors=sensors, actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler, set_insecure = True)
          device.connect()
 
+def clear_motion():
+  global work
+  while work:
+    lock.acquire()
+    motionTriggered = deviceManager.motionTriggered.copy()
+    lock.release()
+    now = time.time()
+    for key in motionTriggered:
+        value = motionTriggered.get(key)
+        logger.debug("Clear motion trigger test " + key + " " + str(now - value)) 
+        if now - value > 10:
+          logger.info("Clear motion trigger " + key + " " + str(now - value)) 
+          motion = deviceManager.motions.get(key)
+          (success, errorMessage) = device.publishSensorIfOld(0, motion)
+          lock.acquire()
+          deviceManager.motionTriggered.pop(key, None)
+          lock.release()
+
+    sleep(5)
+
 try:
     config.loadSids()
     deviceManager.createSensors()
     thread = Thread(target = perform_ping)
     thread.start()
+
+    clearMotionThread = Thread(target = clear_motion)
+    clearMotionThread.start()
 
     device.connect()
     while work:
