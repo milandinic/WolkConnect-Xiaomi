@@ -5,7 +5,8 @@ import struct
 import json
 from Crypto.Cipher import AES
 import binascii
-import time 
+import time
+from Config import AutoConfig
 
 class XiaomiConnector:
     """Connector for the Xiaomi Mi Hub and devices on multicast."""
@@ -16,10 +17,10 @@ class XiaomiConnector:
     MULTICAST_ADDRESS = '224.0.0.50'
     SOCKET_BUFSIZE = 1024
     IV = bytes.fromhex('17996d093d28ddb3ba695a2e6f58562e')
-    sid = '0'
     counter = 0
+    initalDataLoaded = False
 
-    def __init__(self, gatewayPassword, data_callback=None):
+    def __init__(self, gatewayPassword, data_callback=None, config = None):
         """Initialize the connector."""
         self.data_callback = data_callback
         self.last_tokens = dict()
@@ -27,6 +28,7 @@ class XiaomiConnector:
         self.gatewayPassword = gatewayPassword
 
         self.nodes = dict()
+        self.config = config
 
     def _prepare_socket(self):
         sock = socket.socket(socket.AF_INET,  # Internet
@@ -34,12 +36,10 @@ class XiaomiConnector:
 
         sock.bind(("0.0.0.0", self.MULTICAST_PORT))
 
-        mreq = struct.pack("=4sl", socket.inet_aton(self.MULTICAST_ADDRESS),
-                           socket.INADDR_ANY)
+        mreq = struct.pack("=4sl", socket.inet_aton(self.MULTICAST_ADDRESS), socket.INADDR_ANY)
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 32)
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 1)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF,
-                        self.SOCKET_BUFSIZE)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.SOCKET_BUFSIZE)
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
         return sock
@@ -48,7 +48,7 @@ class XiaomiConnector:
         data, addr = self.socket.recvfrom(self.SOCKET_BUFSIZE)
         try:
             payload = json.loads(data.decode("utf-8"))
-            print("Incoming data:" + str(payload))
+            print("Incoming data: " + str(payload))
             self.handle_incoming_data(payload)          
 
         except Exception as e:
@@ -85,12 +85,13 @@ class XiaomiConnector:
 
         if "token" in payload:
             self.last_tokens[payload["sid"]] = payload['token']
-            if self.nodes[payload["sid"]]["model"] == "gateway" and self.sid == '0':
-                print("Setting gateway sid " + payload["sid"])
-                self.sid = payload["sid"]
+            if self.nodes[payload["sid"]]["model"] == "gateway" and self.config.gatewayId != None and self.initalDataLoaded == False:
+                self.initalDataLoaded = True
+                self.request_sids(self.config.gatewayId)
 
     def request_sids(self, sid):
         """Request System Ids from the hub."""
+        print("request_sids " + str(sid))
         self.send_command({"cmd": "get_id_list", sid: sid})
 
     def request_current_status(self, device_sid):
@@ -99,7 +100,7 @@ class XiaomiConnector:
 
     def update_rgb_color(self, r, g, b, a):
         cipher = AES.new(self.gatewayPassword, AES.MODE_CBC, self.IV)
-        token = self.last_tokens[self.sid]
+        token = self.last_tokens[self.config.gatewayId]
         enc = cipher.encrypt(token)
         key = binascii.hexlify(enc).decode('ascii')
         color = (int(a) << 24)|(int(r) << 16)|(int(g) << 8)|b

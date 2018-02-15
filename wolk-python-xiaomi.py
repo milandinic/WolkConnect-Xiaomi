@@ -1,5 +1,3 @@
-""" Example of using WolkConnect library
-"""
 from threading import Thread
 from time import sleep
 import logging
@@ -8,7 +6,9 @@ import WolkConnect
 import datetime
 import sys
 
-from connector import XiaomiConnector
+from Connector import XiaomiConnector
+from Config import AutoConfig
+from DeviceManager import DeviceManager
 
 logger = logging.getLogger("WolkConnect")
 WolkConnect.setupLoggingLevel(logging.INFO)
@@ -18,100 +18,15 @@ serial = "uj0u3nph5ttjsm1g"
 password = "4b74c38c-a6bf-4e6f-9698-3eac3b65905e"
 
 # xiaomi gateway password
-gatewayPassword = "1234567890"
-
-#sid'
-buttonsIds = []
-doorIds = []
-smokeIds = []
-leakIds = []
-temperatureIds = []
-motionIds = []
-gatewayId = None
-
-#sid' end
-
-buttonValues = {}
-
-buttons = {}
-doors = {}
-doorVoltages = {}
-smokes = {}
-smokeDensities = {}
-smokeVoltages = {}
-leaks = {}
-leakVoltages = {}
-temperatures = {}
-humidities = {}
-temperatureVoltages = {}
-motions = {}
-motionVoltages = {}
-
-sensors = list(buttons.values())
-sensors.extend(list(doors.values()))
-sensors.extend(list(doorVoltages.values()))
-sensors.extend(list(smokes.values()))
-sensors.extend(list(smokeVoltages.values()))
-sensors.extend(list(smokeDensities.values()))
-sensors.extend(list(leaks.values()))
-sensors.extend(list(leaks.values()))
-sensors.extend(list(leakVoltages.values()))
-sensors.extend(list(temperatures.values()))
-sensors.extend(list(humidities.values()))
-sensors.extend(list(temperatureVoltages.values()))
-sensors.extend(list(motions.values()))
-sensors.extend(list(motionVoltages.values()))
+gatewayPassword = "12344556789"
 
 pingInterval = 60 #seconds
 lastPing = time.time() + pingInterval
 
 work = True
 
-def createSensors():
-    index = 1
-    for sid in buttonsIds:
-      buttonValues[sid] = 0
-      buttons[sid] = WolkConnect.Sensor("CSW" + str(index), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=1000.0)
-      buttons[sid].setReadingValue(0)
-      index = index + 1
-
-    index = 1
-    for sid in doorIds:
-      doors[sid] = WolkConnect.Sensor("DOOR" + str(index), WolkConnect.DataType.STRING)
-      doorVoltages[sid] = WolkConnect.Sensor("DOORV" + str(index), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=10.0)
-      index = index + 1
-
-    index = 1
-    for sid in smokeIds:
-      smokes[sid] = WolkConnect.Sensor("SMOKE" + str(index), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=100.0)
-      smokeDensities[sid] = WolkConnect.Sensor("SMOKED" + str(index), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=255.0)
-      smokeVoltages[sid] = WolkConnect.Sensor("SMOKEV" + str(index), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=10.0)
-      index = index + 1
-
-    index = 1
-    for sid in leakIds:
-      leaks[sid] = WolkConnect.Sensor("LEAK" + str(index), WolkConnect.DataType.STRING)
-      leakVoltages[sid] = WolkConnect.Sensor("LEAKV" + str(index), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=10.0)
-      index = index + 1
-
-    index = 1
-    for sid in temperatureIds:
-      temperatures[sid] = WolkConnect.Sensor("T" + str(index), WolkConnect.DataType.NUMERIC, minValue=-40.0, maxValue=80.0)
-      temperatureVoltages[sid] = WolkConnect.Sensor("TV" + str(index), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=100.0)
-      humidities[sid] = WolkConnect.Sensor("H" + str(index), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=100.0)
-      index = index + 1
-
-    index = 1
-    for sid in motionIds:
-      motions[sid] = WolkConnect.Sensor("M" + str(index), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=1.0)
-      motionVoltages[sid] = WolkConnect.Sensor("MV" + str(index), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=100.0)
-      index = index + 1
-
-
-createSensors()
-
-
-# Setup sensors, actuators and alarms
+config = AutoConfig()
+deviceManager = DeviceManager(config = config)
 
 illumination = WolkConnect.Sensor("LI", WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=4000.0)
 
@@ -126,7 +41,6 @@ redColor.value = 0
 blueColor.value = 0
 greenColor.value = 0
 alfaColor.value = 0
-
 
 def mqttMessageHandler(wolkDevice, message):     
     actuator = wolkDevice.getActuator(message.ref)
@@ -159,15 +73,16 @@ def push_data(model, sid, cmd, data):
   handle_smoke_alarm(model, sid, cmd, data)
   handle_water_leak(model, sid, cmd, data)
   handle_gateway(model, sid, cmd, data)
-  handle_motion(model, sid, cmd, data)    
+  handle_motion(model, sid, cmd, data)
 
 # gateway
 # https://xiaomi-mi.com/sockets-and-sensors/xiaomi-mi-gateway-2/
 def handle_gateway(model, sid, cmd, data):
  if model == "gateway":
-  if gatewayId != sid:
-    logger.warning("Gaweway detected with sid: " + sid)
-    return
+  if config.gatewayId != sid:
+    logger.info("Gaweway detected with sid: " + sid)
+    config.gatewayId = sid
+    config.saveSids()
   for key, value in data.items():
     if key == "illumination":
         (success, errorMessage) = device.publishSensorIfOld(value, illumination)
@@ -191,27 +106,29 @@ def handle_gateway(model, sid, cmd, data):
 # https://xiaomi-mi.com/mi-smart-home/xiaomi-mi-wireless-switch/
 def handle_switch(model, sid, cmd, data):
   if model == "switch":
-   button = buttons.get(sid)
+   button = deviceManager.buttons.get(sid)
    if (button == None):
-      logger.warning("New BUTTON device detected with sid " + sid)
-      return
-   buttonValue = buttonValues[sid]
+      button = deviceManager.registerNewSwitch(sid)
+      logger.info("New Switch device detected with sid " + sid)
+
+   buttonValue = deviceManager.buttonValues[sid]
    for key, value in data.items():  
      if key == "status" and value == "click":
       button.setReadingValue(buttonValue % 2)
-      buttonValues[sid] = buttonValue + 1
+      deviceManager.buttonValues[sid] = buttonValue + 1
       (success, errorMessage) = device.publishSensor(button)
 
 # temperature humidity sensor
 # https://xiaomi-mi.com/sockets-and-sensors/xiaomi-mi-temperature-humidity-sensor/
 def handle_temperature_humidity(model, sid, cmd, data):
  if model == "sensor_ht":
-   temperature = temperatures.get(sid)
+   temperature = deviceManager.temperatures.get(sid)
    if (temperature == None):
-      logger.warning("New TEMERATURE device detected with sid " + sid)
-      return
-   temperatureVoltage = temperatureVoltages[sid]
-   humidity = humidities[sid]
+     temperature = deviceManager.regiterNewTemperature(sid)
+     logger.info("New TEMERATURE device detected with sid " + sid)
+
+   temperatureVoltage = deviceManager.temperatureVoltages[sid]
+   humidity = deviceManager.humidities[sid]
    for key, value in data.items():
      if key == "temperature":
        (success, errorMessage) = device.publishSensorIfOld(int(int(value) /10) / 10, temperature)
@@ -224,11 +141,12 @@ def handle_temperature_humidity(model, sid, cmd, data):
 # https://xiaomi-mi.com/sockets-and-sensors/xiaomi-mi-door-window-sensors/
 def handle_door_window_sensor(model, sid, cmd, data):
   if model == "magnet":
-   door = doors.get(sid)
+   door = deviceManager.doors.get(sid)
    if (door == None):
-      logger.warning("New DOOR device detected with sid " + sid)
-      return
-   doorVoltage = doorVoltages[sid]
+      door = deviceManager.registerNewDoor(sid)
+      logger.info("New DOOR device detected with sid " + sid)
+
+   doorVoltage = deviceManager.doorVoltages[sid]
    for key, value in data.items():
       if key == "status":
         (success, errorMessage) = device.publishSensorIfOld(value, door)
@@ -239,13 +157,13 @@ def handle_door_window_sensor(model, sid, cmd, data):
 # https://xiaomi-mi.com/sockets-and-sensors/xiaomi-mijia-honeywell-smoke-detector-white/
 def handle_smoke_alarm(model, sid, cmd, data):
  if model == "smoke":
-   smoke = smokes.get(sid)
+   smoke = deviceManager.smokes.get(sid)
    if (smoke == None):
-     logger.warning("New SMOKE device detected with sid " + sid)
-     return
+      smoke = deviceManager.registerNewSmoke(sid)
+      logger.warning("New SMOKE device detected with sid " + sid)
 
-   smokeVoltage = smokeVoltages[sid]
-   smokeDensity = smokeDensities[sid]
+   smokeVoltage = deviceManager.smokeVoltages[sid]
+   smokeDensity = deviceManager.smokeDensities[sid]
    for key, value in data.items():  
        if key == "alarm":
          (success, errorMessage) = device.publishSensorIfOld(value, smoke)
@@ -258,11 +176,12 @@ def handle_smoke_alarm(model, sid, cmd, data):
 # https://xiaomi-mi.com/news-and-actions/aqara-water-leak-sensor-device-that-can-make-the-whole-family-happy/
 def handle_water_leak(model, sid, cmd, data):
   if model == "sensor_wleak.aq1":
-    leak = leaks.get(sid)
+    leak = deviceManager.leaks.get(sid)
     if (leak == None):
+      leak = deviceManager.registerNewLeak(sid)
       logger.warning("New LEAK device detected with sid " + sid)
-      return
-    leakVoltage = leakVoltages[sid]
+
+    leakVoltage = deviceManager.leakVoltages[sid]
     for key, value in data.items():
          if key == "status":
           (success, errorMessage) = device.publishSensorIfOld(value, leak)
@@ -273,22 +192,22 @@ def handle_water_leak(model, sid, cmd, data):
 # https://xiaomi-mi.com/sockets-and-sensors/xiaomi-mi-occupancy-sensor/
 def handle_motion(model, sid, cmd, data):
    if model == "motion":
-    motion = motions.get(sid)
+    motion = deviceManager.motions.get(sid)
     if (motion == None):
+      motion = deviceManager.registerNewMotion(sid)
       logger.warning("New MOTION device detected with sid " + sid)
-      return
-    motionVoltage = motionVoltages[sid]
+
+    motionVoltage = deviceManager.motionVoltages[sid]
     for key, value in data.items():
          if key == "status":
           (success, errorMessage) = device.publishSensorIfOld(value, motion)
          elif key == "voltage":
           (success, errorMessage) = device.publishSensorIfOld(value/1000, motionVoltage)
 
-connector = XiaomiConnector(gatewayPassword = gatewayPassword, data_callback=push_data)
-
+connector = XiaomiConnector(gatewayPassword = gatewayPassword, data_callback=push_data, config=config)
 serializer = WolkConnect.WolkSerializerType.JSON_MULTI
 
-device = WolkConnect.WolkDevice(serial, password, sensors=sensors, actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler)
+device = WolkConnect.WolkDevice(serial, password, sensors=deviceManager.getSensors(), actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler)
 
 def perform_ping():
     global work
@@ -296,32 +215,25 @@ def perform_ping():
     while work:
        device.ping()
        sleep(pingInterval)
-       if lastPing + pingInterval + 5 < time.time():
-         print("missing ping")
+       oldTime = lastPing + pingInterval + 10
+       newTime = time.time()
+       logger.info("Ping time %d", newTime - oldTime)
+       if oldTime < newTime:
+         logger.waring("missing ping")
          device.disconnect()
-         device = WolkConnect.WolkDevice(serial, password, sensors=sensors, actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler)
+         device = WolkConnect.WolkDevice(serial, password, host = "api-integration.wolksense.com", certificate_file_path="WolkConnect/integration/ca.crt", sensors=sensors, actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler, set_insecure = True)
          device.connect()
 
-def ask_initial_data():
-  if gatewayId != None:
-     sleep(10)
-     connector.request_sids(gatewayId)
-     sleep(10)
-     for key in connector.nodes:
-        connector.request_current_status(key)
-
 try:
+    config.loadSids()
+    deviceManager.createSensors()
     thread = Thread(target = perform_ping)
     thread.start()
-
-    threadInitalRead = Thread(target = ask_initial_data)
-    threadInitalRead.start()
 
     device.connect()
     while work:
         connector.check_incoming()
     device.disconnect()
-    
     exit(0)
 
 except WolkConnect.WolkMQTT.WolkMQTTClientException as e:
