@@ -226,7 +226,7 @@ def perform_ping():
        newTime = time.time()
        logger.info("Ping time %d", newTime - oldTime)
        if oldTime < newTime:
-         logger.waring("missing ping")
+         logger.warning("missing ping")
          device.disconnect()
          device = WolkConnect.WolkDevice(serial, password, host = "api-integration.wolksense.com", certificate_file_path="WolkConnect/integration/ca.crt", sensors=sensors, actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler, set_insecure = True)
          device.connect()

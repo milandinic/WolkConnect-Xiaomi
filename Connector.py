@@ -104,7 +104,7 @@ class XiaomiConnector:
         enc = cipher.encrypt(token)
         key = binascii.hexlify(enc).decode('ascii')
         color = (int(a) << 24)|(int(r) << 16)|(int(g) << 8)|b
-        self.send_command({"cmd": "write", "model": "gateway", "sid": self.sid, "short_id": 0, "data": {'rgb': color,'key': key.upper()}})
+        self.send_command({"cmd": "write", "model": "gateway", "sid": self.config.gatewayId, "short_id": 0, "data": {'rgb': color,'key': key.upper()}})
 
     def send_command(self, data):
         """Send a command to the UDP subject (all related will answer)."""
