@@ -2,7 +2,7 @@
 
 Connector library written in Python3 for WolkAbout platform. [link to Wolkabout](https://demo.wolkabout.com)
 
-##Installation
+## Installation
 ------------
 **Just run standard python dependency script**
 
@@ -13,7 +13,7 @@ Connector library written in Python3 for WolkAbout platform. [link to Wolkabout]
 Connector has device auto-discovery feature.
 It works with one gateway only. 
 
-##Supported devices
+## Supported devices
 ------------
 
 Xiaomi Mi Smart Home Gateway
@@ -24,7 +24,7 @@ Xiaomi Mi Smart Home Occupancy Sensor
 Xiaomi mijia Honeywell Smoke Detector
 Aqara Water Leak Sensor
 
-##Enable local area communication protocol
+## Enable local area communication protocol
 ------------
 
 Install Mi Home from Play store [link to play](https://play.google.com/store/apps/details?id=com.xiaomi.smarthome) or iTunes [link to itunes](https://itunes.apple.com/app/mi-home-xiaomi-for-your-smarthome/id957323480).
@@ -54,7 +54,7 @@ This is the screen that we wanted to see and read password from. This is your ga
 ![Image of lanprotocol](https://raw.githubusercontent.com/milandinic/WolkConnect-Xiaomi/master/readme/lanprotcol.png)
 
 
-##Usage
+## Usage
 -------------
 
 edit wolk-python-xiaomi.py to set Wolkabout device username and password, and Xiaomi gateway password.
