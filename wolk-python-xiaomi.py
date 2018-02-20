@@ -213,8 +213,7 @@ def handle_motion(model, sid, cmd, data):
 connector = XiaomiConnector(gatewayPassword = gatewayPassword, data_callback=push_data, config=config)
 serializer = WolkConnect.WolkSerializerType.JSON_MULTI
 
-device = WolkConnect.WolkDevice(serial, password, host = "api-integration.wolksense.com",
-     certificate_file_path="WolkConnect/integration/ca.crt", sensors=deviceManager.getSensors(), actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler, set_insecure = True)
+device = WolkConnect.WolkDevice(serial, password, sensors=deviceManager.getSensors(), actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler, set_insecure = True)
 
 def perform_ping():
     global work
@@ -228,7 +227,7 @@ def perform_ping():
        if oldTime < newTime:
          logger.warning("missing ping")
          device.disconnect()
-         device = WolkConnect.WolkDevice(serial, password, host = "api-integration.wolksense.com", certificate_file_path="WolkConnect/integration/ca.crt", sensors=sensors, actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler, set_insecure = True)
+         device = WolkConnect.WolkDevice(serial, password, sensors=deviceManager.getSensors(), actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler, set_insecure = True)
          device.connect()
 
 def clear_motion():
