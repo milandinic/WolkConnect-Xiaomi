@@ -6,7 +6,10 @@ import json
 from Crypto.Cipher import AES
 import binascii
 import time
-from Config import AutoConfig
+import logging
+from XiaomiConnect.Config import AutoConfig
+
+logger = logging.getLogger(__name__)
 
 class XiaomiConnector:
     """Connector for the Xiaomi Mi Hub and devices on multicast."""
@@ -48,12 +51,13 @@ class XiaomiConnector:
         data, addr = self.socket.recvfrom(self.SOCKET_BUFSIZE)
         try:
             payload = json.loads(data.decode("utf-8"))
-            print("Incoming data: " + str(payload))
+            logger.info("Received data")
+            logger.debug(str(payload))
             self.handle_incoming_data(payload)          
 
         except Exception as e:
             raise
-            print("Can't handle message %r (%r)" % (data, e))
+            logger.error("Can't handle message %r (%r)" % (data, e))
 
     def handle_incoming_data(self, payload):
         """Handle an incoming payload, save related data if needed,
@@ -91,7 +95,7 @@ class XiaomiConnector:
 
     def request_sids(self, sid):
         """Request System Ids from the hub."""
-        print("request_sids " + str(sid))
+        logger.info("request_sids " + str(sid))
         self.send_command({"cmd": "get_id_list", sid: sid})
 
     def request_current_status(self, device_sid):

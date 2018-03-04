@@ -1,21 +1,15 @@
 
-from Config import AutoConfig
+from XiaomiConnect.Config import AutoConfig
 import logging
 import WolkConnect
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-ch.setFormatter(formatter)
-logger.addHandler(ch)
 
 class DeviceManager:
 
   buttonValues = {}
   buttons = {}
+  buttonVoltages = {}
   doors = {}
   doorVoltages = {}
   smokes = {}
@@ -42,6 +36,7 @@ class DeviceManager:
 
   def getSensors(self):
     sensors = list(self.buttons.values())
+    sensors.extend(list(self.buttonVoltages.values()))
     sensors.extend(list(self.doors.values()))
     sensors.extend(list(self.doorVoltages.values()))
     sensors.extend(list(self.smokes.values()))
@@ -83,7 +78,8 @@ class DeviceManager:
 
   def registerSwitch(self, sid):
       self.buttonValues[sid] = 0
-      self.buttons[sid] = WolkConnect.Sensor("CSW" + str(self.switchIndex), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=1000.0)
+      self.buttons[sid] = WolkConnect.Sensor("BUTTON" + str(self.switchIndex), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=1000.0)
+      self.buttonVoltages[sid] = WolkConnect.Sensor("BUTTONV" + str(self.switchIndex), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=10.0)
       self.buttons[sid].setReadingValue(0)
       self.switchIndex = self.switchIndex + 1
       self.config.saveSids()

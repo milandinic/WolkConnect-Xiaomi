@@ -3,16 +3,14 @@ from time import sleep
 import logging
 import time
 import WolkConnect
+import XiaomiConnect
 import datetime
 import sys
 import threading
 
-from Connector import XiaomiConnector
-from Config import AutoConfig
-from DeviceManager import DeviceManager
-
 logger = logging.getLogger("WolkConnect")
-WolkConnect.setupLoggingLevel(logging.INFO)
+WolkConnect.setupLoggingLevel(logging.DEBUG)
+XiaomiConnect.setupLoggingLevel(logging.DEBUG)
 
 lock = threading.Lock()
 
@@ -28,8 +26,8 @@ lastPing = time.time() + pingInterval
 
 work = True
 
-config = AutoConfig()
-deviceManager = DeviceManager(config = config)
+config = XiaomiConnect.AutoConfig()
+deviceManager = XiaomiConnect.DeviceManager(config = config)
 
 illumination = WolkConnect.Sensor("LI", WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=4000.0)
 
@@ -114,12 +112,16 @@ def handle_switch(model, sid, cmd, data):
       button = deviceManager.registerNewSwitch(sid)
       logger.info("New Switch device detected with sid " + sid)
 
+   buttonVoltage = deviceManager.buttonVoltages[sid]
    buttonValue = deviceManager.buttonValues[sid]
-   for key, value in data.items():  
+   for key, value in data.items():
+# todo handle double click too
      if key == "status" and value == "click":
       button.setReadingValue(buttonValue % 2)
       deviceManager.buttonValues[sid] = buttonValue + 1
       (success, errorMessage) = device.publishSensor(button)
+     elif key == "voltage":
+      (success, errorMessage) = device.publishSensorIfOld(value/1000, buttonVoltage)
 
 # temperature humidity sensor
 # https://xiaomi-mi.com/sockets-and-sensors/xiaomi-mi-temperature-humidity-sensor/
@@ -191,7 +193,7 @@ def handle_water_leak(model, sid, cmd, data):
          elif key == "voltage":
           (success, errorMessage) = device.publishSensorIfOld(value/1000, leakVoltage)
 
-# Xiaomi Mi Smart Home Occupancy Senso
+# Xiaomi Mi Smart Home Occupancy Sensor
 # https://xiaomi-mi.com/sockets-and-sensors/xiaomi-mi-occupancy-sensor/
 def handle_motion(model, sid, cmd, data):
    if model == "motion":
@@ -210,10 +212,10 @@ def handle_motion(model, sid, cmd, data):
          elif key == "voltage":
           (success, errorMessage) = device.publishSensorIfOld(value/1000, motionVoltage)
 
-connector = XiaomiConnector(gatewayPassword = gatewayPassword, data_callback=push_data, config=config)
+connector = XiaomiConnect.XiaomiConnector(gatewayPassword = gatewayPassword, data_callback=push_data, config=config)
 serializer = WolkConnect.WolkSerializerType.JSON_MULTI
 
-device = WolkConnect.WolkDevice(serial, password, sensors=deviceManager.getSensors(), actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler, set_insecure = True)
+device = WolkConnect.WolkDevice(serial, password, sensors=deviceManager.getSensors(), actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler)
 
 def perform_ping():
     global work
@@ -227,7 +229,7 @@ def perform_ping():
        if oldTime < newTime:
          logger.warning("missing ping")
          device.disconnect()
-         device = WolkConnect.WolkDevice(serial, password, sensors=deviceManager.getSensors(), actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler, set_insecure = True)
+         device = WolkConnect.WolkDevice(serial, password, sensors=deviceManager.getSensors(), actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler)
          device.connect()
 
 def clear_motion():
@@ -266,6 +268,6 @@ try:
     exit(0)
 
 except WolkConnect.WolkMQTT.WolkMQTTClientException as e:
-    print("WolkMQTTClientException occured with value: " + e.value)
+    logger.error("WolkMQTTClientException occured with value: " + e.value)
 
 
