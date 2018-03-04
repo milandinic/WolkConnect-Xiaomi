@@ -31,13 +31,13 @@
 	
 	{"name":"Door 1","reference":"DOOR1","unit":"State","dataType":"STRING","precision":1,"size":1,"description":"","readingType":"GENERIC","minimum":0,"maximum":1},
 	{"name":"Door 1 voltage","reference":"DOORV1","unit":"Vots","dataType":"NUMERIC","precision":1,"size":1,"description":"","readingType":"GENERIC","minimum":0,"maximum":10},
-	{"name":"Door 2","reference":"DOOR2","unit":"status","dataType":"NUMERIC","precision":1,"size":1,"description":"","readingType":"GENERIC","minimum":0,"maximum":1},
+	{"name":"Door 2","reference":"DOOR2","unit":"status","dataType":"STRING","precision":1,"size":1,"description":"","readingType":"GENERIC","minimum":0,"maximum":1},
 	{"name":"Door 2 voltage","reference":"DOORV2","unit":"Volts","dataType":"NUMERIC","precision":1,"size":1,"description":"","readingType":"GENERIC","minimum":0,"maximum":10},
-	{"name":"Door 3","reference":"DOOR3","unit":"status","dataType":"NUMERIC","precision":1,"size":1,"description":"","readingType":"GENERIC","minimum":0,"maximum":1},
+	{"name":"Door 3","reference":"DOOR3","unit":"status","dataType":"STRING","precision":1,"size":1,"description":"","readingType":"GENERIC","minimum":0,"maximum":1},
 	{"name":"Door 3 voltage","reference":"DOORV3","unit":"Volts","dataType":"NUMERIC","precision":1,"size":1,"description":"","readingType":"GENERIC","minimum":0,"maximum":10},
-	{"name":"Door 4","reference":"DOOR4","unit":"status","dataType":"NUMERIC","precision":1,"size":1,"description":"","readingType":"GENERIC","minimum":0,"maximum":1},
+	{"name":"Door 4","reference":"DOOR4","unit":"status","dataType":"STRING","precision":1,"size":1,"description":"","readingType":"GENERIC","minimum":0,"maximum":1},
 	{"name":"Door 4 voltage","reference":"DOORV4","unit":"Volts","dataType":"NUMERIC","precision":1,"size":1,"description":"","readingType":"GENERIC","minimum":0,"maximum":10},
-	{"name":"Door 5","reference":"DOOR5","unit":"status","dataType":"NUMERIC","precision":1,"size":1,"description":"","readingType":"GENERIC","minimum":0,"maximum":1},
+	{"name":"Door 5","reference":"DOOR5","unit":"status","dataType":"STRING","precision":1,"size":1,"description":"","readingType":"GENERIC","minimum":0,"maximum":1},
 	{"name":"Door 5 voltage","reference":"DOORV5","unit":"Volts","dataType":"NUMERIC","precision":1,"size":1,"description":"","readingType":"GENERIC","minimum":0,"maximum":10},
 
 	{"name":"Smoke 1","reference":"SMOKE1","unit":"smoke present","dataType":"NUMERIC","precision":1,"size":1,"description":"","readingType":"GENERIC","minimum":0,"maximum":100},
