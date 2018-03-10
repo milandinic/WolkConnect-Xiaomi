@@ -243,6 +243,7 @@ def clear_motion():
         value = motionTriggered.get(key)
         logger.debug("Clear motion trigger test " + key + " " + str(now - value)) 
         if now - value > 10:
+          lastPing = time.time() + pingInterval
           logger.info("Clear motion trigger " + key + " " + str(now - value)) 
           motion = deviceManager.motions.get(key)
           (success, errorMessage) = device.publishSensorIfOld(0, motion)
