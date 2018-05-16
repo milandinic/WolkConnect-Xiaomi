@@ -179,7 +179,7 @@ class WolkDevice:
     def publishAlarm(self, alarm):
         """ Publish alarm to MQTT broker
         """
-        logger.info("%s publishing alarm %s", self.serial, alarm.alarmRef)
+        logger.debug("%s publishing alarm %s", self.serial, alarm.alarmRef)
         result = self.mqttClient.publishAlarm(alarm)
         if result[0]:
             logger.info("%s published alarm %s", self.serial, alarm.alarmRef)
@@ -190,7 +190,7 @@ class WolkDevice:
     def publishActuator(self, actuator):
         """ Publish actuator to MQTT broker
         """
-        logger.info("%s publishing actuator %s", self.serial, actuator.actuatorRef)
+        logger.debug("%s publishing actuator %s", self.serial, actuator.actuatorRef)
         result = self.mqttClient.publishActuator(actuator)
         if result[0]:
             logger.info("%s published actuator %s", self.serial, actuator.actuatorRef)
@@ -214,24 +214,6 @@ class WolkDevice:
                     return result
         
         return result
-
-    def publishRandomReadings(self):
-        """ Publish random values of all device's sensors
-        """
-        sensors = self.getSensors()
-
-        if not sensors:
-            message = "Could not publish random readings. {0} does not have sensors".format(str(self))
-            logger.warning(message)
-            return (False, message)
-
-        timestamp = time.time()
-        for sensor in sensors:
-            randomValues = sensor.generateRandomValues()
-            sensor.setReadingValues(randomValues)
-            sensor.setTimestamp(timestamp)
-
-        return self._publishReadings(sensors)
 
     def publishBufferedReadings(self, buffer, clearOnSuccess=False):
         """ Publish readings from the buffer
@@ -260,7 +242,7 @@ class WolkDevice:
 
         alarmsToPublish = buffer.getAlarms()
         result = (True, "")
-        logger.info("%s publishing alarms", self.serial)
+        logger.debug("%s publishing alarms", self.serial)
         for alarm in alarmsToPublish:
             result = self.publishAlarm(alarm)
             if result[0] == False:
@@ -287,7 +269,7 @@ class WolkDevice:
                 self.responseHandler(self, message)
 
     def _publishReadings(self, readings):
-        logger.info("%s publishing readings", self.serial)
+        logger.debug("%s publishing readings", self.serial)
         result = self.mqttClient.publishReadings(readings)
         if result[0]:
             logger.info("%s published readings", self.serial)

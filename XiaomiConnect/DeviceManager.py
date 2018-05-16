@@ -23,6 +23,18 @@ class DeviceManager:
   motions = {}
   motionVoltages = {}
   motionTriggered = {}
+  cubes = {}
+  cubeVoltages = {}
+
+  btTemperatures = {}
+  btHumidities = {}
+  btTemperatureVoltages = {}
+
+  btFlowerCareHumidities = {}
+  btFlowerCareTemparatures = {}
+  btFlowerCareLights = {}
+  btFlowerCareSoils = {}
+  btFlowerCareVoltages = {}
 
   switchIndex = 1
   doorIndex = 1
@@ -30,6 +42,9 @@ class DeviceManager:
   leakIndex = 1
   temperatureIndex = 1
   motionIndex = 1
+  cubeIndex = 1
+  btTemperatureIndex = 1
+  btFlowerCareIndex = 1
 
   def __init__(self, config = None):
       self.config = config
@@ -50,6 +65,19 @@ class DeviceManager:
     sensors.extend(list(self.temperatureVoltages.values()))
     sensors.extend(list(self.motions.values()))
     sensors.extend(list(self.motionVoltages.values()))
+    sensors.extend(list(self.cubes.values()))
+    sensors.extend(list(self.cubeVoltages.values()))
+
+    #bt
+    sensors.extend(list(self.btTemperatures.values()))
+    sensors.extend(list(self.btHumidities.values()))
+    sensors.extend(list(self.btTemperatureVoltages.values()))
+
+    sensors.extend(list(self.btFlowerCareHumidities.values()))
+    sensors.extend(list(self.btFlowerCareTemparatures.values()))
+    sensors.extend(list(self.btFlowerCareLights.values()))
+    sensors.extend(list(self.btFlowerCareSoils.values()))
+    sensors.extend(list(self.btFlowerCareVoltages.values()))
     return sensors
 
   def registerNewSwitch(self, sid):
@@ -76,10 +104,22 @@ class DeviceManager:
       self.config.motionIds.append(sid)
       return self.registerMotion(sid)
 
+  def registerNewCube(self, sid):
+      self.config.cubeIds.append(sid)
+      return self.registerCube(sid)
+
+  def registerNewBTTemperature(self, sid):
+      self.config.btTemperatureIds.append(sid)
+      return self.registerBTTemperature(id)
+
+  def registerNewBTFlowerCare(self, sid):
+      self.config.btFlowerCareIds.append(sid)
+      return self.registerBTFlowerCare(id)
+
   def registerSwitch(self, sid):
       self.buttonValues[sid] = 0
-      self.buttons[sid] = WolkConnect.Sensor("BUTTON" + str(self.switchIndex), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=1000.0)
-      self.buttonVoltages[sid] = WolkConnect.Sensor("BUTTONV" + str(self.switchIndex), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=10.0)
+      self.buttons[sid] = WolkConnect.Sensor("CSW" + str(self.switchIndex), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=1000.0)
+      self.buttonVoltages[sid] = WolkConnect.Sensor("CSWV" + str(self.switchIndex), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=10.0)
       self.buttons[sid].setReadingValue(0)
       self.switchIndex = self.switchIndex + 1
       self.config.saveSids()
@@ -121,6 +161,33 @@ class DeviceManager:
       self.config.saveSids()
       return self.motions[sid]
 
+  def registerCube(self, sid):
+      self.cubes[sid] = WolkConnect.Sensor("C" + str(self.cubeIndex), WolkConnect.DataType.STRING)
+      self.cubeVoltages[sid] = WolkConnect.Sensor("CV" + str(self.cubeIndex), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=10.0)
+      self.cubeIndex = self.cubeIndex + 1
+      self.config.saveSids()
+      return self.cubes[sid]
+
+  def registerBTTemperature(self, sid):
+      logger.debug("Register bt tempperature " + sid)
+      self.btTemperatures[sid] = WolkConnect.Sensor("BTT" + str(self.btTemperatureIndex), WolkConnect.DataType.NUMERIC, minValue=-40.0, maxValue=80.0)
+      self.btHumidities[sid] = WolkConnect.Sensor("BTH" + str(self.btTemperatureIndex), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=100.0)
+      self.btTemperatureVoltages[sid] = WolkConnect.Sensor("BTTV" + str(self.btTemperatureIndex), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=10.0)
+      self.btTemperatureIndex = self.btTemperatureIndex + 1
+      self.config.saveSids()
+      return self.btTemperatures[sid]
+
+  def registerBTFlowerCare(self, sid):
+      logger.debug("Register flower care " + sid)
+      self.btFlowerCareTemparatures[sid] = WolkConnect.Sensor("BTFCT" + str(self.btFlowerCareIndex), WolkConnect.DataType.NUMERIC, minValue=-40.0, maxValue=80.0)
+      self.btFlowerCareHumidities[sid] = WolkConnect.Sensor("BTFCH" + str(self.btFlowerCareIndex), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=100.0)
+      self.btFlowerCareLights[sid] = WolkConnect.Sensor("BTFCL" + str(self.btFlowerCareIndex), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=10000.0)
+      self.btFlowerCareSoils[sid] = WolkConnect.Sensor("BTFCS" + str(self.btFlowerCareIndex), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=10000.0)
+      self.btFlowerCareVoltages[sid] = WolkConnect.Sensor("BTTV" + str(self.btFlowerCareIndex), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=10.0)
+      self.btFlowerCareIndex = self.btFlowerCareIndex + 1
+      self.config.saveSids()
+      return self.btFlowerCareTemparatures[sid]
+
   def createSensors(self):
     for sid in self.config.switchIds:
         self.registerSwitch(sid)
@@ -140,3 +207,11 @@ class DeviceManager:
     for sid in self.config.motionIds:
       self.registerMotion(sid)
 
+    for sid in self.config.cubeIds:
+      self.registerCube(sid)
+
+    for sid in self.config.btTemperatureIds:
+      self.registerBTTemperature(sid)      
+
+    for sid in self.config.btFlowerCareIds:
+      self.registerBTFlowerCare(sid) 

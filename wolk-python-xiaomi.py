@@ -7,6 +7,11 @@ import XiaomiConnect
 import datetime
 import sys
 import threading
+import miflora
+from mith.mijia_poller import MijiaPoller, MI_HUMIDITY, MI_TEMPERATURE, MI_BATTERY
+
+from btlewrap import available_backends, BluepyBackend, GatttoolBackend, PygattBackend
+from miflora.miflora_poller import MiFloraPoller, MI_CONDUCTIVITY, MI_MOISTURE, MI_LIGHT, MI_BATTERY
 
 logger = logging.getLogger("WolkConnect")
 WolkConnect.setupLoggingLevel(logging.DEBUG)
@@ -43,6 +48,87 @@ blueColor.value = 0
 greenColor.value = 0
 alfaColor.value = 0
 
+
+# bluetuth devices
+
+def updateAllBtDevices():
+   while work:
+     for key in config.btTemperatureIds:
+       updateBtTemperature(key)
+
+     for key in config.btFlowerCareIds:
+       updateBtTemperature(key)
+     sleep(pingInterval)  
+
+def updateBtFloweCare(address):
+    """Poll data from the sensor."""
+    poller = MiFloraPoller(address, GatttoolBackend)
+    print("Getting data from Mi Flora")
+
+    val_bat  = "{}".format(poller.parameter_value(MI_BATTERY)) 
+    val_temp = "{}".format(poller.parameter_value(MI_TEMPERATURE))
+    val_hum = "{}".format(poller.parameter_value(MI_MOISTURE))
+    val_light = "{}".format(poller.parameter_value(MI_LIGHT))
+    val_con = "{}".format(poller.parameter_value(MI_CONDUCTIVITY))
+
+    flowerCareTemperature = deviceManager.btFlowerCareTemparatures.get(address)
+    if (flowerCareTemperature == None):
+      flowerCareTemperature = deviceManager.registerNewBTFlowerCare(address)
+      logger.info("New Flower care device detected with address " + address)
+
+    flowerCareHumidity = deviceManager.btFlowerCareHumidities[address]
+    flowerCareLight = deviceManager.btFlowerCareLights[address]
+    flowerCareSoil = deviceManager.btFlowerCareSoils[address]
+    flowerCareVoltage = deviceManager.btFlowerCareVoltages[address]
+
+    device.publishSensorIfOld(val_temp, flowerCareTemperature)
+    device.publishSensorIfOld(val_hum, flowerCareHumidity)
+    device.publishSensorIfOld(val_light, flowerCareLight)
+    device.publishSensorIfOld(val_con, flowerCareSoil)
+    device.publishSensorIfOld(val_bat, flowerCareVoltage)
+
+def updateBtTemperature(address):
+    poller = MijiaPoller(address)
+    loop = 0
+    try:
+        temp = poller.parameter_value(MI_TEMPERATURE)
+    except:
+        temp = "Not set"
+    
+    while loop < 2 and temp == "Not set":
+        logger.warning("Error reading value retry after 5 seconds...\n")
+        time.sleep(5)
+        poller = MijiaPoller(address)
+        loop += 1
+        try:
+            temp = poller.parameter_value(MI_TEMPERATURE)
+        except:
+            temp = "Not set"
+    
+    if temp == "Not set":
+        logger.error("Error reading value\n")
+        return
+
+    val_bat  = "{}".format(poller.parameter_value(MI_BATTERY)) 
+    val_temp = "{}".format(poller.parameter_value(MI_TEMPERATURE))
+    val_hum = "{}".format(poller.parameter_value(MI_HUMIDITY))
+
+    logger.debug("battery " + val_bat + "% temperature " + val_temp + " humidity " + val_hum + "%")
+
+    btTemperature = deviceManager.btTemperatures.get(address)
+    if (btTemperature == None):
+      btTemperature = deviceManager.registerNewBTTemperature(address)
+      logger.info("New BT temperature device detected with address " + address)
+
+    btHumidity = deviceManager.btHumidities[address]
+    btTemperatureVoltage = deviceManager.btTemperatureVoltages[address]
+    
+    device.publishSensorIfOld(val_temp, btTemperature)
+    device.publishSensorIfOld(val_hum, btHumidity)
+    device.publishSensorIfOld(val_bat, btTemperatureVoltage)
+
+# end bluetuth 
+
 def mqttMessageHandler(wolkDevice, message):     
     actuator = wolkDevice.getActuator(message.ref)
     global lastPing
@@ -75,6 +161,7 @@ def push_data(model, sid, cmd, data):
   handle_water_leak(model, sid, cmd, data)
   handle_gateway(model, sid, cmd, data)
   handle_motion(model, sid, cmd, data)
+  handle_cube(model, sid, cmd, data)
 
 # gateway
 # https://xiaomi-mi.com/sockets-and-sensors/xiaomi-mi-gateway-2/
@@ -102,6 +189,21 @@ def handle_gateway(model, sid, cmd, data):
             device.publishActuator(greenColor)
             device.publishActuator(blueColor)
             device.publishActuator(alfaColor)
+
+# cube
+def handle_cube(model, sid, cmd, data):
+  if model == "cube":
+   cube = deviceManager.cubes.get(sid)
+   if (cube == None):
+      cube = deviceManager.registerNewCube(sid)
+      logger.info("New Cube device detected with sid " + sid)
+
+   cubeVoltage = deviceManager.cubeVoltages[sid]
+   for key, value in data.items():
+      if key == "status":
+        (success, errorMessage) = device.publishSensorIfOld(value, cube)
+      elif key == "voltage":
+        (success, errorMessage) = device.publishSensorIfOld(value/1000, cubeVoltage)
 
 # switch 
 # https://xiaomi-mi.com/mi-smart-home/xiaomi-mi-wireless-switch/
@@ -220,6 +322,7 @@ device = WolkConnect.WolkDevice(serial, password, sensors=deviceManager.getSenso
 def perform_ping():
     global work
     global device
+    global lastPing
     while work:
        device.ping()
        sleep(pingInterval)
@@ -227,6 +330,7 @@ def perform_ping():
        newTime = time.time()
        logger.info("Ping time %d", newTime - oldTime)
        if oldTime < newTime:
+         lastPing = time.time() + pingInterval
          logger.warning("missing ping")
          device.disconnect()
          device = WolkConnect.WolkDevice(serial, password, sensors=deviceManager.getSensors(), actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler)
@@ -243,7 +347,6 @@ def clear_motion():
         value = motionTriggered.get(key)
         logger.debug("Clear motion trigger test " + key + " " + str(now - value)) 
         if now - value > 10:
-          lastPing = time.time() + pingInterval
           logger.info("Clear motion trigger " + key + " " + str(now - value)) 
           motion = deviceManager.motions.get(key)
           (success, errorMessage) = device.publishSensorIfOld(0, motion)
@@ -259,6 +362,9 @@ try:
     thread = Thread(target = perform_ping)
     thread.start()
 
+    btthread = Thread(target = updateAllBtDevices)
+    btthread.start()
+
     clearMotionThread = Thread(target = clear_motion)
     clearMotionThread.start()
 
@@ -271,4 +377,6 @@ try:
 except WolkConnect.WolkMQTT.WolkMQTTClientException as e:
     logger.error("WolkMQTTClientException occured with value: " + e.value)
 
+
+# So id devices use: sudo hcitool lescan
 

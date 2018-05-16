@@ -15,10 +15,13 @@ class AutoConfig:
    leakIds = []
    temperatureIds = []
    motionIds = []
+   cubeIds = []
+   btTemperatureIds = []
+   btFlowerCareIds = []
   
    def readArray(self, line, resultArray, entityName):
      logger.debug("Found " + entityName + " line")
-     splitted = line.split(":")
+     splitted = line.split(" ")
      if len(splitted) > 1:
       ids = splitted[1].strip().split(",")
       strippedIds = [item.strip() for item in ids]
@@ -50,10 +53,16 @@ class AutoConfig:
         self.readArray(line, self.temperatureIds, "Temp/Humidity sensor")
       elif "motionIds" in line:
         self.readArray(line, self.motionIds, "Motion/Human sensor")
+      elif "cubeIds" in line:
+        self.readArray(line, self.cubeIds, "Cube")
+      elif "btTemperatureIds" in line:
+        self.readArray(line, self.btTemperatureIds, "Bluetuth Temp/Humidity sensor")
+      elif "btFlowerCareIds" in line:
+        self.readArray(line, self.btFlowerCareIds, "Bluetuth Flower care")        
     file.close()
 
    def saveListToFile(self, file, name, list):
-      file.write("\n" + name + ":" + str(list).replace("[","").replace("]","").replace("'","").replace(" ",""))
+      file.write("\n" + name + " " + str(list).replace("[","").replace("]","").replace("'","").replace(" ",""))
 
    def saveSids(self):
       logger.debug("Saving sid.txt")
@@ -65,4 +74,9 @@ class AutoConfig:
       self.saveListToFile(file, "leakIds", self.leakIds)
       self.saveListToFile(file, "temperatureIds", self.temperatureIds)
       self.saveListToFile(file, "motionIds", self.motionIds)
+      self.saveListToFile(file, "cubeIds", self.cubeIds)
+      # bt devices
+      self.saveListToFile(file, "btTemperatureIds", self.btTemperatureIds)
+      self.saveListToFile(file, "btFlowerCareIds", self.btFlowerCareIds)
       file.close()
+      

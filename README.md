@@ -29,7 +29,7 @@ Connector has device auto-discovery feature. It works with one gateway only. Her
 To make Gateway integration possible (and WolkConnect-Python-Xiaomi to work) it is required to enable lan protocol.
 Here are required steps:
 
-* Install Mi Home from Play store [link to play](https://play.google.com/store/apps/details?id=com.xiaomi.smarthome) or iTunes [link to itunes](https://itunes.apple.com/app/mi-home-xiaomi-for-your-smarthome/id957323480).
+* Install Mi Home from Play store [Play store](https://play.google.com/store/apps/details?id=com.xiaomi.smarthome) or [iTunes](https://itunes.apple.com/app/mi-home-xiaomi-for-your-smarthome/id957323480).
 * Set region to Mainland China (this is mandatory). You can access this feature from main screen via: Profile-Settings-Region.get 
 
 * Pair your gateway with you mobile device and select WiFi.
