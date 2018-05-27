@@ -124,16 +124,21 @@ class WolkDevice:
     def publishSensorIfOld(self, newValue, sensor):
         """ Publish one sensor
         """
+        now = time.time()
         if not isinstance(sensor, Sensor):        
             message = "Provided object is not a Sensor"
             logger.warning(message)
             return (False, message)
-        if newValue != sensor.readingValue[0]:
-            sensor.setTimestamp(time.time())
+        if not sensor.readingValue:
+            sensor.setTimestamp(now)
             sensor.setReadingValue(newValue)
             return self._publishReadings([sensor])
-
-        return (False, "Update not needed yet")
+        elif newValue != sensor.readingValue[0] or sensor.timestamp < now - 600:
+            sensor.setTimestamp(now)
+            sensor.setReadingValue(newValue)
+            return self._publishReadings([sensor])
+        else:
+            return (False, "Same value")
 
     def publishSensor(self, sensor):
         """ Publish one sensor

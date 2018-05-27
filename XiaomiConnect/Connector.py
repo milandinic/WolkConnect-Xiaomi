@@ -56,7 +56,6 @@ class XiaomiConnector:
             self.handle_incoming_data(payload)          
 
         except Exception as e:
-            raise
             logger.error("Can't handle message %r (%r)" % (data, e))
 
     def handle_incoming_data(self, payload):

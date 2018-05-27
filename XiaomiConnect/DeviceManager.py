@@ -183,7 +183,7 @@ class DeviceManager:
       self.btFlowerCareHumidities[sid] = WolkConnect.Sensor("BTFCH" + str(self.btFlowerCareIndex), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=100.0)
       self.btFlowerCareLights[sid] = WolkConnect.Sensor("BTFCL" + str(self.btFlowerCareIndex), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=10000.0)
       self.btFlowerCareSoils[sid] = WolkConnect.Sensor("BTFCS" + str(self.btFlowerCareIndex), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=10000.0)
-      self.btFlowerCareVoltages[sid] = WolkConnect.Sensor("BTTV" + str(self.btFlowerCareIndex), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=10.0)
+      self.btFlowerCareVoltages[sid] = WolkConnect.Sensor("FCV" + str(self.btFlowerCareIndex), WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=10.0)
       self.btFlowerCareIndex = self.btFlowerCareIndex + 1
       self.config.saveSids()
       return self.btFlowerCareTemparatures[sid]

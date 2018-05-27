@@ -57,19 +57,27 @@ def updateAllBtDevices():
        updateBtTemperature(key)
 
      for key in config.btFlowerCareIds:
-       updateBtTemperature(key)
-     sleep(pingInterval)  
+       updateBtFloweCare(key)
+     sleep(600)  
 
 def updateBtFloweCare(address):
     """Poll data from the sensor."""
     poller = MiFloraPoller(address, GatttoolBackend)
-    print("Getting data from Mi Flora")
+    logger.debug("Getting data from Mi Flora " + address)
 
-    val_bat  = "{}".format(poller.parameter_value(MI_BATTERY)) 
+    try:
+        poller.parameter_value(MI_TEMPERATURE)
+    except:
+      logger.debug("Could not get flower care")
+      return
+
+    val_bat  = "{}".format(poller.parameter_value(MI_BATTERY))
     val_temp = "{}".format(poller.parameter_value(MI_TEMPERATURE))
     val_hum = "{}".format(poller.parameter_value(MI_MOISTURE))
     val_light = "{}".format(poller.parameter_value(MI_LIGHT))
     val_con = "{}".format(poller.parameter_value(MI_CONDUCTIVITY))
+
+    logger.debug("battery " + val_bat + "% temperature " + val_temp + " humidity " + val_hum + "% light "+ val_light + " soil " + val_con)
 
     flowerCareTemperature = deviceManager.btFlowerCareTemparatures.get(address)
     if (flowerCareTemperature == None):
@@ -88,6 +96,7 @@ def updateBtFloweCare(address):
     device.publishSensorIfOld(val_bat, flowerCareVoltage)
 
 def updateBtTemperature(address):
+    logger.debug("Getting data from BT Temperature " + address)
     poller = MijiaPoller(address)
     loop = 0
     try:
@@ -191,6 +200,7 @@ def handle_gateway(model, sid, cmd, data):
             device.publishActuator(alfaColor)
 
 # cube
+# https://xiaomi-mi.com/mi-smart-home/xiaomi-mi-smart-home-cube-white/
 def handle_cube(model, sid, cmd, data):
   if model == "cube":
    cube = deviceManager.cubes.get(sid)
