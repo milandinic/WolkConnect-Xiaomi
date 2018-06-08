@@ -18,6 +18,7 @@ class AutoConfig:
    cubeIds = []
    btTemperatureIds = []
    btFlowerCareIds = []
+   plugIds = []
   
    def readArray(self, line, resultArray, entityName):
      logger.debug("Found " + entityName + " line")
@@ -56,9 +57,11 @@ class AutoConfig:
       elif "cubeIds" in line:
         self.readArray(line, self.cubeIds, "Cube")
       elif "btTemperatureIds" in line:
-        self.readArray(line, self.btTemperatureIds, "Bluetuth Temp/Humidity sensor")
+        self.readArray(line, self.btTemperatureIds, "Bluetooth Temp/Humidity sensor")
       elif "btFlowerCareIds" in line:
-        self.readArray(line, self.btFlowerCareIds, "Bluetuth Flower care")        
+        self.readArray(line, self.btFlowerCareIds, "Bluetooth Flower care")
+      elif "plugIds" in line:
+        self.readArray(line, self.plugIds, "Plugs")    
     file.close()
 
    def saveListToFile(self, file, name, list):
@@ -75,6 +78,7 @@ class AutoConfig:
       self.saveListToFile(file, "temperatureIds", self.temperatureIds)
       self.saveListToFile(file, "motionIds", self.motionIds)
       self.saveListToFile(file, "cubeIds", self.cubeIds)
+      self.saveListToFile(file, "plugIds", self.plugIds)
       # bt devices
       self.saveListToFile(file, "btTemperatureIds", self.btTemperatureIds)
       self.saveListToFile(file, "btFlowerCareIds", self.btFlowerCareIds)

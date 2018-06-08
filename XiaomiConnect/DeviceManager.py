@@ -25,6 +25,9 @@ class DeviceManager:
   motionTriggered = {}
   cubes = {}
   cubeVoltages = {}
+  plugs = {}
+  plugsVoltages = {}
+  plugInUse = {}
 
   btTemperatures = {}
   btHumidities = {}
@@ -45,6 +48,7 @@ class DeviceManager:
   cubeIndex = 1
   btTemperatureIndex = 1
   btFlowerCareIndex = 1
+  plugIndex = 1
 
   def __init__(self, config = None):
       self.config = config
@@ -79,6 +83,10 @@ class DeviceManager:
     sensors.extend(list(self.btFlowerCareSoils.values()))
     sensors.extend(list(self.btFlowerCareVoltages.values()))
     return sensors
+
+  def getActuators(self):
+      actuators = list(self.plugs.values())
+      return actuators
 
   def registerNewSwitch(self, sid):
       self.config.switchIds.append(sid)
@@ -115,6 +123,10 @@ class DeviceManager:
   def registerNewBTFlowerCare(self, sid):
       self.config.btFlowerCareIds.append(sid)
       return self.registerBTFlowerCare(id)
+
+  def registerNewPlug(self, sid):
+      self.config.plugIds.append(sid)
+      return self.registerPlug(id)
 
   def registerSwitch(self, sid):
       self.buttonValues[sid] = 0
@@ -188,7 +200,17 @@ class DeviceManager:
       self.config.saveSids()
       return self.btFlowerCareTemparatures[sid]
 
+  def registerPlug(self, sid):
+      self.plugs[sid] = WolkConnect.Actuator("PLUG" + str(self.plugIndex), WolkConnect.DataType.BOOLEAN)
+      self.plugs[sid].setValue(0)
+      self.plugIndex = self.plugIndex + 1
+      self.config.saveSids()
+      return self.plugs[sid]
+
   def createSensors(self):
+    for sid in self.config.plugIds:
+        self.registerPlug(sid)
+
     for sid in self.config.switchIds:
         self.registerSwitch(sid)
 

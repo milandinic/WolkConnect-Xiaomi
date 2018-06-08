@@ -67,6 +67,7 @@ class WolkDevice:
                 self._alarms[alarm.alarmRef] = alarm
 
         mqttSerializer = WolkMQTTSerializer.getSerializer(serializer, serial)
+        logger.debug("extract topics")
         subscriptionTopics = mqttSerializer.extractSubscriptionTopics(self)
         self.responseHandler = responseHandler
         clientConfig = WolkMQTT.WolkMQTTClientConfig(host, port, serial, password, mqttSerializer, subscriptionTopics, self._mqttResponseHandler, certificate_file_path, set_insecure, qos)

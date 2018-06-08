@@ -61,8 +61,10 @@ class XiaomiConnector:
     def handle_incoming_data(self, payload):
         """Handle an incoming payload, save related data if needed,
         and use the callback if there is one.
-        """
+        """ 
+        logger.debug("handle_incoming_data")
         if isinstance(payload.get('data', None), basestring):
+            logger.debug("payload data")
             cmd = payload["cmd"]
             if cmd in ["heartbeat", "report", "read_ack"]:
                 if self.data_callback is not None:
@@ -108,6 +110,16 @@ class XiaomiConnector:
         key = binascii.hexlify(enc).decode('ascii')
         color = (int(a) << 24)|(int(r) << 16)|(int(g) << 8)|b
         self.send_command({"cmd": "write", "model": "gateway", "sid": self.config.gatewayId, "short_id": 0, "data": {'rgb': color,'key': key.upper()}})
+
+    def update_plug(self, sid, plug):
+        cipher = AES.new(self.gatewayPassword, AES.MODE_CBC, self.IV)
+        token = self.last_tokens[self.config.gatewayId]
+        enc = cipher.encrypt(token)
+        key = binascii.hexlify(enc).decode('ascii')
+        status = "off"
+        if plug.value == "true":
+           status = "on"
+        self.send_command({"cmd": "write", "model": "plug", "sid": sid, "short_id": 0, "data": {'status': status ,'key': key.upper()}})
 
     def send_command(self, data):
         """Send a command to the UDP subject (all related will answer)."""

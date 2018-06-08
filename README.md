@@ -7,6 +7,7 @@ Connector library written in Python3 for WolkAbout platform. [link to Wolkabout]
 **Just run standard python dependency script**
 
  ```sh
+    sudo apt install bluez
     sudo apt install python3
     sudo apt install pip3
     pip3 install -r requirements.txt

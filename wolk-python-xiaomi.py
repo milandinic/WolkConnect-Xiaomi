@@ -32,7 +32,9 @@ lastPing = time.time() + pingInterval
 work = True
 
 config = XiaomiConnect.AutoConfig()
+config.loadSids()
 deviceManager = XiaomiConnect.DeviceManager(config = config)
+deviceManager.createSensors()
 
 illumination = WolkConnect.Sensor("LI", WolkConnect.DataType.NUMERIC, minValue=0.0, maxValue=4000.0)
 
@@ -42,12 +44,12 @@ greenColor = WolkConnect.Actuator("CG", WolkConnect.DataType.NUMERIC)
 alfaColor = WolkConnect.Actuator("CA", WolkConnect.DataType.NUMERIC)
 
 actuators = [redColor, blueColor, greenColor, alfaColor]
+actuators.extend(deviceManager.getActuators())
 
 redColor.value = 0
 blueColor.value = 0
 greenColor.value = 0
 alfaColor.value = 0
-
 
 # bluetuth devices
 
@@ -138,7 +140,8 @@ def updateBtTemperature(address):
 
 # end bluetuth 
 
-def mqttMessageHandler(wolkDevice, message):     
+def mqttMessageHandler(wolkDevice, message):
+    logger.debug(message)
     actuator = wolkDevice.getActuator(message.ref)
     global lastPing
     if not actuator:
@@ -155,6 +158,11 @@ def mqttMessageHandler(wolkDevice, message):
             b = int(float(blueColor.value))
             a = int(float(alfaColor.value))
             connector.update_rgb_color(r, g, b, a)
+
+        for sid, plug in deviceManager.plugs.items():
+          logger.debug(plug)
+          if plug.actuatorRef == message.ref:
+            connector.update_plug(sid, plug)
 		
         wolkDevice.publishActuator(actuator)
     elif message.wolkCommand == WolkConnect.WolkCommand.STATUS:
@@ -163,6 +171,7 @@ def mqttMessageHandler(wolkDevice, message):
         logger.warning("Unknown command %s", message.wolkCommand)
 
 def push_data(model, sid, cmd, data):
+  logger.debug("push_data")
   handle_switch(model, sid, cmd, data)
   handle_temperature_humidity(model, sid, cmd, data)
   handle_door_window_sensor(model, sid, cmd, data)
@@ -171,6 +180,7 @@ def push_data(model, sid, cmd, data):
   handle_gateway(model, sid, cmd, data)
   handle_motion(model, sid, cmd, data)
   handle_cube(model, sid, cmd, data)
+  handle_plug(model, sid, cmd, data)
 
 # gateway
 # https://xiaomi-mi.com/sockets-and-sensors/xiaomi-mi-gateway-2/
@@ -198,6 +208,20 @@ def handle_gateway(model, sid, cmd, data):
             device.publishActuator(greenColor)
             device.publishActuator(blueColor)
             device.publishActuator(alfaColor)
+
+# plug
+# https://xiaomi-mi.com/sockets-and-sensors/xiaomi-mi-smart-socket-plug-2-zigbee-edition-white/
+def handle_plug(model, sid, cmd, data):
+  if model == "plug":
+   plug = deviceManager.plugs.get(sid)
+   if (plug == None):
+      plug = deviceManager.registerNewPlug(sid)
+      logger.info("New Plug device detected with sid " + sid)
+
+   for key, value in data.items():
+      if key == "status":
+        plug.setValue(value == "on")
+        (success, errorMessage) = device.publishActuator(plug)
 
 # cube
 # https://xiaomi-mi.com/mi-smart-home/xiaomi-mi-smart-home-cube-white/
@@ -367,8 +391,7 @@ def clear_motion():
     sleep(5)
 
 try:
-    config.loadSids()
-    deviceManager.createSensors()
+
     thread = Thread(target = perform_ping)
     thread.start()
 
