@@ -513,9 +513,12 @@ class WolkJSONMQTTSerializer(WolkMQTTSerializer):
         if not device:
             return None
 
-        topicPath = self.rootActuatorsSubscribeTopic + self.serialNumber + "/"
-        actautorTopics = [topicPath + actuator.actuatorRef for actuator in device.getActuators()]
+    #   topicPath = self.rootActuatorsSubscribeTopic + self.serialNumber + "/"
+    #   actautorTopics = [topicPath + actuator.actuatorRef for actuator in device.getActuators()]
+        actautorTopics = list()
         actautorTopics.append("pong/" + self.serialNumber)
+        actautorTopics.append("actuators/commands/" + self.serialNumber + "/#")
+
         return actautorTopics
 
     def _serializeReading(self, reading):
