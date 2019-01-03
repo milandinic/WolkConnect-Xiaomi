@@ -1,0 +1,9 @@
+XiaomiConnect/*.py		            /etc/opt/xiaomi/XiaomiConnect
+WolkConnect/*.py		            /etc/opt/xiaomi/WolkConnect
+WolkConnect/Serialization/*.py		/etc/opt/xiaomi/WolkConnect/Serialization
+mith/*.py	                        /etc/opt/xiaomi/mith
+miflora/*.py	                  	/etc/opt/xiaomi/miflora
+wolk-python-xiaomi.py	           	/etc/opt/xiaomi
+configuration.properties           	/etc/opt/xiaomi
+requirements.txt                	/etc/opt/xiaomi
+WolkConnect/integration/ca.crt     	/etc/opt/xiaomi/WolkConnect

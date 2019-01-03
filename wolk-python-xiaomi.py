@@ -5,26 +5,27 @@ import time
 import WolkConnect
 import XiaomiConnect
 import datetime
-import sys
-import threading
+import threading, sys, os
 import miflora
 from mith.mijia_poller import MijiaPoller, MI_HUMIDITY, MI_TEMPERATURE, MI_BATTERY
 
 from btlewrap import available_backends, BluepyBackend, GatttoolBackend, PygattBackend
 from miflora.miflora_poller import MiFloraPoller, MI_CONDUCTIVITY, MI_MOISTURE, MI_LIGHT, MI_BATTERY
 
+import configparser
+
+config = configparser.RawConfigParser()
+config.read('configuration.properties')
+
+serial = config.get('WolkDevice', 'device.key');
+password = config.get('WolkDevice', 'device.password');
+gatewayPassword = config.get('Xiaomi', 'gateway.password');
+
 logger = logging.getLogger("WolkConnect")
 WolkConnect.setupLoggingLevel(logging.DEBUG)
 XiaomiConnect.setupLoggingLevel(logging.DEBUG)
 
 lock = threading.Lock()
-
-# Device parameters
-serial = "uj0u3nph5ttjsm1g"
-password = "4b74c38c-a6bf-4e6f-9698-3eac3b65905e"
-
-# xiaomi gateway password
-gatewayPassword = "12344556789"
 
 pingInterval = 60 #seconds
 lastPing = time.time() + pingInterval
@@ -91,11 +92,24 @@ def updateBtFloweCare(address):
     flowerCareSoil = deviceManager.btFlowerCareSoils[address]
     flowerCareVoltage = deviceManager.btFlowerCareVoltages[address]
 
-    device.publishSensorIfOld(val_temp, flowerCareTemperature)
-    device.publishSensorIfOld(val_hum, flowerCareHumidity)
-    device.publishSensorIfOld(val_light, flowerCareLight)
-    device.publishSensorIfOld(val_con, flowerCareSoil)
-    device.publishSensorIfOld(val_bat, flowerCareVoltage)
+    updated = []
+
+    if device.updateSensorIfOld(val_temp, flowerCareTemperature):
+      updated.append(flowerCareTemperature)
+
+    if device.updateSensorIfOld(val_hum, flowerCareHumidity):
+      updated.append(flowerCareHumidity)
+
+    if device.updateSensorIfOld(val_light, flowerCareLight):
+      updated.append(flowerCareLight)
+
+    if device.updateSensorIfOld(val_con, flowerCareSoil):
+      updated.append(flowerCareSoil)
+
+    if device.updateSensorIfOld(val_bat, flowerCareVoltage):
+      updated.append(flowerCareVoltage)
+
+    device.publishSensors(updated)
 
 def updateBtTemperature(address):
     logger.debug("Getting data from BT Temperature " + address)
@@ -134,9 +148,16 @@ def updateBtTemperature(address):
     btHumidity = deviceManager.btHumidities[address]
     btTemperatureVoltage = deviceManager.btTemperatureVoltages[address]
     
-    device.publishSensorIfOld(val_temp, btTemperature)
-    device.publishSensorIfOld(val_hum, btHumidity)
-    device.publishSensorIfOld(val_bat, btTemperatureVoltage)
+    updated = []
+    if device.updateSensorIfOld(val_temp, btTemperature):
+      updated.append(btTemperature)
+
+    if device.updateSensorIfOld(val_hum, btHumidity):
+      updated.append(btHumidity)
+
+    if device.updateSensorIfOld(val_bat, btTemperatureVoltage):
+      updated.append(btTemperatureVoltage)
+    device.publishSensors(updated)
 
 # end bluetuth 
 
@@ -250,14 +271,18 @@ def handle_switch(model, sid, cmd, data):
 
    buttonVoltage = deviceManager.buttonVoltages[sid]
    buttonValue = deviceManager.buttonValues[sid]
+   updated = []
    for key, value in data.items():
 # todo handle double click too
      if key == "status" and value == "click":
       button.setReadingValue(buttonValue % 2)
       deviceManager.buttonValues[sid] = buttonValue + 1
-      (success, errorMessage) = device.publishSensor(button)
+      if device.publishSensor(button):
+        updated.append(button)
      elif key == "voltage":
-      (success, errorMessage) = device.publishSensorIfOld(value/1000, buttonVoltage)
+      if device.publishSensorIfOld(value/1000, buttonVoltage):
+        updated.append(buttonVoltage)
+   device.publishSensors(updated)
 
 # temperature humidity sensor
 # https://xiaomi-mi.com/sockets-and-sensors/xiaomi-mi-temperature-humidity-sensor/
@@ -270,13 +295,19 @@ def handle_temperature_humidity(model, sid, cmd, data):
 
    temperatureVoltage = deviceManager.temperatureVoltages[sid]
    humidity = deviceManager.humidities[sid]
+   updated = []
    for key, value in data.items():
      if key == "temperature":
-       (success, errorMessage) = device.publishSensorIfOld(int(int(value) /10) / 10, temperature)
+        if device.updateSensorIfOld(int(int(value) /10) / 10, temperature):
+           updated.append(temperature)
      elif key == "humidity":
-       (success, errorMessage) = device.publishSensorIfOld(int(int(value) /10) / 10, humidity)
+       if device.updateSensorIfOld(int(int(value) /10) / 10, humidity):
+         updated.append(humidity)
      elif key == "voltage":
-       (success, errorMessage) = device.publishSensorIfOld(value/1000, temperatureVoltage)
+       if device.updateSensorIfOld(value/1000, temperatureVoltage):
+         updated.append(temperatureVoltage)
+
+   device.publishSensors(updated)
 
 # door window sensor
 # https://xiaomi-mi.com/sockets-and-sensors/xiaomi-mi-door-window-sensors/
@@ -288,11 +319,15 @@ def handle_door_window_sensor(model, sid, cmd, data):
       logger.info("New DOOR device detected with sid " + sid)
 
    doorVoltage = deviceManager.doorVoltages[sid]
+   updated = []
    for key, value in data.items():
       if key == "status":
-        (success, errorMessage) = device.publishSensorIfOld(value, door)
+        if device.publishSensorIfOld(value, door):
+          updated.append(door)
       elif key == "voltage":
-        (success, errorMessage) = device.publishSensorIfOld(value/1000, doorVoltage)
+        if device.publishSensorIfOld(value/1000, doorVoltage):
+          updated.append(doorVoltage)
+   device.publishSensors(updated)
 
 # smoke alarm
 # https://xiaomi-mi.com/sockets-and-sensors/xiaomi-mijia-honeywell-smoke-detector-white/
@@ -305,13 +340,18 @@ def handle_smoke_alarm(model, sid, cmd, data):
 
    smokeVoltage = deviceManager.smokeVoltages[sid]
    smokeDensity = deviceManager.smokeDensities[sid]
+   updated = []
    for key, value in data.items():  
        if key == "alarm":
-         (success, errorMessage) = device.publishSensorIfOld(value, smoke)
+         if device.publishSensorIfOld(value, smoke):
+           updated.append(smoke)
        elif key == "voltage":
-         (success, errorMessage) = device.publishSensorIfOld(value/1000, smokeVoltage)
+         if device.publishSensorIfOld(value/1000, smokeVoltage):
+           updated.append(smokeVoltage)
        elif key == "density":
-         (success, errorMessage) = device.publishSensorIfOld(value, smokeDensity)
+         if device.publishSensorIfOld(value, smokeDensity):
+           updated.append(smokeDensity)
+   device.publishSensors(updated)
 
 # aqara water leak detector
 # https://xiaomi-mi.com/news-and-actions/aqara-water-leak-sensor-device-that-can-make-the-whole-family-happy/
@@ -323,15 +363,20 @@ def handle_water_leak(model, sid, cmd, data):
       logger.warning("New LEAK device detected with sid " + sid)
 
     leakVoltage = deviceManager.leakVoltages[sid]
+    updated = []
     for key, value in data.items():
          if key == "status":
-          (success, errorMessage) = device.publishSensorIfOld(value, leak)
+          if device.publishSensorIfOld(value, leak):
+            updated.append(leak)
          elif key == "voltage":
-          (success, errorMessage) = device.publishSensorIfOld(value/1000, leakVoltage)
+          if device.publishSensorIfOld(value/1000, leakVoltage):
+            updated.append(leakVoltage)
+    device.publishSensors(updated)
 
 # Xiaomi Mi Smart Home Occupancy Sensor
 # https://xiaomi-mi.com/sockets-and-sensors/xiaomi-mi-occupancy-sensor/
 def handle_motion(model, sid, cmd, data):
+   # todo handle no motion status
    if model == "motion":
     motion = deviceManager.motions.get(sid)
     if (motion == None):
@@ -351,10 +396,11 @@ def handle_motion(model, sid, cmd, data):
 connector = XiaomiConnect.XiaomiConnector(gatewayPassword = gatewayPassword, data_callback=push_data, config=config)
 serializer = WolkConnect.WolkSerializerType.JSON_MULTI
 
-device = WolkConnect.WolkDevice(serial, password, sensors=deviceManager.getSensors(), actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler)
+device = WolkConnect.WolkDevice(serial, password, host = "api-integration.wolksense.com",
+     sensors=deviceManager.getSensors(), actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler, 
+     set_insecure = True)
 
 def perform_ping():
-    global work
     global device
     global lastPing
     while work:
@@ -364,14 +410,10 @@ def perform_ping():
        newTime = time.time()
        logger.info("Ping time %d", newTime - oldTime)
        if oldTime < newTime:
-         lastPing = time.time() + pingInterval
          logger.warning("missing ping")
-         device.disconnect()
-         device = WolkConnect.WolkDevice(serial, password, sensors=deviceManager.getSensors(), actuators=actuators, serializer=serializer, responseHandler=mqttMessageHandler)
-         device.connect()
+         os_.exit(1)
 
 def clear_motion():
-  global work
   while work:
     lock.acquire()
     motionTriggered = deviceManager.motionTriggered.copy()
@@ -381,17 +423,15 @@ def clear_motion():
         value = motionTriggered.get(key)
         logger.debug("Clear motion trigger test " + key + " " + str(now - value)) 
         if now - value > 10:
-          logger.info("Clear motion trigger " + key + " " + str(now - value)) 
+          logger.info("Clear motion trigger " + key + " " + str(now - value))
           motion = deviceManager.motions.get(key)
           (success, errorMessage) = device.publishSensorIfOld(0, motion)
           lock.acquire()
           deviceManager.motionTriggered.pop(key, None)
           lock.release()
-
     sleep(5)
 
 try:
-
     thread = Thread(target = perform_ping)
     thread.start()
 
@@ -404,7 +444,13 @@ try:
     device.connect()
     while work:
         connector.check_incoming()
+    logger.info("done with work")     
     device.disconnect()
+
+    thread.exit()
+    btthread.exit()
+    clearMotionThread.exit()
+
     exit(0)
 
 except WolkConnect.WolkMQTT.WolkMQTTClientException as e:
@@ -412,4 +458,3 @@ except WolkConnect.WolkMQTT.WolkMQTTClientException as e:
 
 
 # So id devices use: sudo hcitool lescan
-

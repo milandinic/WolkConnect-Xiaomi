@@ -126,7 +126,7 @@ class WolkDevice:
         """ Publish one sensor
         """
         now = time.time()
-        if not isinstance(sensor, Sensor):        
+        if not isinstance(sensor, Sensor):
             message = "Provided object is not a Sensor"
             logger.warning(message)
             return (False, message)
@@ -140,6 +140,30 @@ class WolkDevice:
             return self._publishReadings([sensor])
         else:
             return (False, "Same value")
+
+    def updateSensorIfOld(self, newValue, sensor):
+        """ Update sensor
+        """
+        now = time.time()
+        if not isinstance(sensor, Sensor):        
+            message = "Provided object is not a Sensor"
+            logger.warning(message)
+            return False
+        if not sensor.readingValue:
+            sensor.setTimestamp(now)
+            sensor.setReadingValue(newValue)
+            return True
+        elif newValue != sensor.readingValue[0] or sensor.timestamp < now - 600:
+            sensor.setTimestamp(now)
+            sensor.setReadingValue(newValue)
+            return True
+        else:
+            return False
+
+    def publishSensors(self, sensors):
+        """ Publish sensors
+        """
+        return self._publishReadings(sensors)
 
     def publishSensor(self, sensor):
         """ Publish one sensor
@@ -162,7 +186,7 @@ class WolkDevice:
 
         return self._publishReadings([rawReading])
 
-    def publishSensors(self, useCurrentTimestamp=False):
+    def publishAllSensors(self, useCurrentTimestamp=False):
         """ Publish current values of all device's sensors
 
             If useCurrentTimestamp is True, each reading will be set the current timestamp,
@@ -208,7 +232,7 @@ class WolkDevice:
     def publishAll(self):
         """ Publish all actuators and sensors
         """
-        result = self.publishSensors()
+        result = self.publishAllSensors()
         if not result[0]:
             return result
 

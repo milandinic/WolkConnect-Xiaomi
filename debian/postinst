@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+
+pip3 install -r /etc/opt/xiaomi/requirements.txt
+touch /etc/opt/xiaomi/sid.txt
+
+#DEBHELPER#

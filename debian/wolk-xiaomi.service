@@ -1,0 +1,13 @@
+[Unit]
+Description=Wolk Xiaomi bridge service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 wolk-python-xiaomi.py
+WorkingDirectory=/etc/opt/xiaomi
+Restart=always
+TimeoutSec=5
+Type=simple
+
+[Install]
+WantedBy=multi-user.target

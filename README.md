@@ -13,6 +13,8 @@ Connector library written in Python3 for WolkAbout platform. [link to Wolkabout]
     pip3 install -r requirements.txt
  ```
 
+ for manual install, but deb will do this for you.
+
 ## Supported devices
 
 Connector has device auto-discovery feature. It works with one gateway only. Here is the list of supported devices at the moment:
@@ -61,23 +63,13 @@ Here are required steps:
 To get Wolkabout username and password go to [link to Wolkabout](https://demo.wolkabout.com) and create an account. It is for free.
 It is required to create a device manifest and a new device from this manifest. (example will be provided soon).
 
-edit wolk-python-xiaomi.py to set Wolkabout device username and password, and Xiaomi gateway password.
-
-```sh
-# Device parameters
-serial = "1234567890"
-password = "4b74c38c-a6bf-4e6f-9698-3eac3b65905e"
-
-# xiaomi gateway password
-gatewayPassword = "0987654321"
-```
+edit /etc/opt/xiaomi/configuration.properties to set Wolkabout device username and password, and Xiaomi gateway password.
 
 Run
 ```sh
- python3 wolk-python-xiaomi.py 
+ systemctl start wolk-xiaomi 
 ```
 to connect to Wolkabout platform.
-
 
 ## Adding new new a smart device type
 
